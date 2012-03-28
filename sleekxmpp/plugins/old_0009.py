@@ -159,7 +159,7 @@ class JabberRPCEntry(object):
 			self.allow[jid].append(resource)
 		else:
 			self.allow[jid] = [resource]
-		
+
 	def acl_deny(self, jid, resource):
 		if jid == None:
 			self.deny = None
@@ -178,11 +178,11 @@ class xep_0009(base.base_plugin):
 	def plugin_init(self):
 		self.xep = '0009'
 		self.description = 'Jabber-RPC'
-		self.xmpp.add_handler("<iq type='set'><query xmlns='jabber:iq:rpc' /></iq>", 
+		self.xmpp.add_handler("<iq type='set'><query xmlns='jabber:iq:rpc' /></iq>",
                                       self._callMethod, name='Jabber RPC Call')
-		self.xmpp.add_handler("<iq type='result'><query xmlns='jabber:iq:rpc' /></iq>", 
+		self.xmpp.add_handler("<iq type='result'><query xmlns='jabber:iq:rpc' /></iq>",
                                       self._callResult, name='Jabber RPC Result')
-		self.xmpp.add_handler("<iq type='error'><query xmlns='jabber:iq:rpc' /></iq>", 
+		self.xmpp.add_handler("<iq type='error'><query xmlns='jabber:iq:rpc' /></iq>",
                                       self._callError, name='Jabber RPC Error')
 		self.entries = {}
 		self.activeCalls = []
@@ -211,7 +211,7 @@ class xep_0009(base.base_plugin):
 				self.entries[entry].acl_allow(jid,resource)
 			else:
 				raise ValueError()
-	
+
 	def acl_deny(self, entry, jid=None, resource=None):
 		#Note: by default all requests are denied unless allowed with acl_allow.
 		#If you deny an entry it will not be allowed regardless of acl_allow
@@ -220,7 +220,7 @@ class xep_0009(base.base_plugin):
 				self.entries[entry].acl_deny(jid,resource)
 			else:
 				raise ValueError()
-	
+
 	def unregister_call(self, entry):
 		#removes the registered call
 		with self.lock:
@@ -238,13 +238,13 @@ class xep_0009(base.base_plugin):
 		methodCall.append(params)
 		query.append(methodCall)
 		return query
- 
+
 	def makeIqMethodCall(self,pto,pmethod,params):
 		iq = self.xmpp.makeIqSet()
 		iq.set('to',pto)
 		iq.append(self.makeMethodCallQuery(pmethod,params))
 		return iq
-	
+
 	def makeIqMethodResponse(self,pto,pid,params):
 		iq = self.xmpp.makeIqResult(pid)
 		iq.set('to',pto)
@@ -260,8 +260,8 @@ class xep_0009(base.base_plugin):
 		iq.append(self.makeMethodCallQuery(pmethod,params))
 		iq.append(self.xmpp['xep_0086'].makeError(condition))
 		return iq
-	
-		
+
+
 
 	def call_remote(self, pto, pmethod, *args):
 		#calls a remote method. Returns the id of the Iq.

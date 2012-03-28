@@ -218,4 +218,3 @@ class xep_0009(base.base_plugin):
     def _extract_method(self, stanza):
         xml = ET.fromstring("%s" % stanza)
         return xml.find("./methodCall/methodName").text
-

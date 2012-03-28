@@ -15,11 +15,11 @@
 import time
 import threading
 import logging
-try:
-    import queue
-except ImportError:
-    import Queue as queue
-
+#try:
+#    import queue
+#except ImportError:
+#    import Queue as queue
+import gevent.queue as queue
 
 log = logging.getLogger(__name__)
 

@@ -20,17 +20,19 @@ import copy
 import logging
 import signal
 import socket as Socket
-import ssl
+import gevent.ssl as ssl
 import sys
 import threading
 import time
 import types
 import random
 import weakref
-try:
-    import queue
-except ImportError:
-    import Queue as queue
+#try:
+#    import queue
+#except ImportError:
+#    import Queue as queue
+import gevent.queue as queue
+import gevent
 
 import sleekxmpp
 from sleekxmpp.thirdparty.statemachine import StateMachine
@@ -44,12 +46,8 @@ from sleekxmpp.xmlstream.matcher import MatchXMLMask
 if sys.version_info < (3, 0):
     from sleekxmpp.xmlstream.filesocket import FileSocket, Socket26
 
-try:
-    import dns.resolver
-except ImportError:
-    DNSPYTHON = False
-else:
-    DNSPYTHON = True
+
+from gevent.dns import resolve_ipv4
 
 
 #: The time in seconds to wait before timing out waiting for response stanzas.
@@ -253,7 +251,7 @@ class XMLStream(object):
         self.event_queue = queue.Queue()
 
         #: A queue of string data to be sent over the stream.
-        self.send_queue = queue.Queue()
+        self.send_queue = queue.JoinableQueue()
 
         #: A :class:`~sleekxmpp.xmlstream.scheduler.Scheduler` instance for
         #: executing callbacks in the future based on time delays.
@@ -372,7 +370,7 @@ class XMLStream(object):
             self.address = (host, int(port))
         try:
             Socket.inet_aton(self.address[0])
-        except Socket.error:
+        except Socket.error, exc:
             self.default_domain = self.address[0]
 
         # Respect previous SSL and TLS usage directives.
@@ -386,16 +384,29 @@ class XMLStream(object):
         connected = self.state.transition('disconnected', 'connected',
                                           func=self._connect)
         while reattempt and not connected and not self.stop.is_set():
+            if self.reconnect_delay is not None:
+                log.info('reconnecting delay: {0}'.format(self.reconnect_delay))
+                time.sleep(self.reconnect_delay)
+
             connected = self.state.transition('disconnected', 'connected',
                                               func=self._connect)
         return connected
 
     def _connect(self):
+
         self.scheduler.remove('Session timeout check')
         self.stop.clear()
         if self.default_domain:
-            self.address = self.pick_dns_answer(self.default_domain,
-                                                self.address[1])
+            try:
+                self.address = (gevent.socket.gethostbyname(self.default_domain),self.address[1])
+            except Exception, exc:
+                error_msg = "Couldnt resolve: %s"
+                self.event('gethostbyname', exc)
+                log.error(error_msg, self.default_domain)
+                self.reconnect_delay = 5
+                return False
+
+
         self.socket = self.socket_class(Socket.AF_INET, Socket.SOCK_STREAM)
         self.configure_socket()
 
@@ -630,23 +641,6 @@ class XMLStream(object):
         """
         self.socket.settimeout(None)
 
-    def configure_dns(self, resolver, domain=None, port=None):
-        """
-        Configure and set options for a :class:`~dns.resolver.Resolver`
-        instance, and other DNS related tasks. For example, you
-        can also check :meth:`~socket.socket.getaddrinfo` to see 
-        if you need to call out to ``libresolv.so.2`` to 
-        run ``res_init()``.
-
-        Meant to be overridden.
-
-        :param resolver: A :class:`~dns.resolver.Resolver` instance
-                         or ``None`` if ``dnspython`` is not installed.
-        :param domain: The initial domain under consideration.
-        :param port: The initial port under consideration.
-        """
-        pass
-
     def start_tls(self):
         """Perform handshakes for TLS.
 
@@ -796,34 +790,6 @@ class XMLStream(object):
             idx += 1
         return False
 
-    def get_dns_records(self, domain, port=None):
-        """Get the DNS records for a domain.
-
-        :param domain: The domain in question.
-        :param port: If the results don't include a port, use this one.
-        """
-        if port is None:
-            port = self.default_port
-        if DNSPYTHON:
-            resolver = dns.resolver.get_default_resolver()
-            self.configure_dns(resolver, domain=domain, port=port)
-
-            try:
-                answers = resolver.query(domain, dns.rdatatype.A)
-            except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
-                log.warning("No A records for %s", domain)
-                return [((domain, port), 0, 0)]
-            except dns.exception.Timeout:
-                log.warning("DNS resolution timed out " + \
-                            "for A record of %s", domain)
-                return [((domain, port), 0, 0)]
-            else:
-                return [((ans.address, port), 0, 0) for ans in answers]
-        else:
-            log.warning("dnspython is not installed -- " + \
-                        "relying on OS A record resolution")
-            self.configure_dns(None, domain=domain, port=port)
-            return [((domain, port), 0, 0)]
 
     def pick_dns_answer(self, domain, port=None):
         """Pick a server and port from DNS answers.
@@ -1183,35 +1149,41 @@ class XMLStream(object):
         """
         depth = 0
         root = None
-        for event, xml in ET.iterparse(self.filesocket, (b'end', b'start')):
-            if event == b'start':
-                if depth == 0:
-                    # We have received the start of the root element.
-                    root = xml
-                    # Perform any stream initialization actions, such
-                    # as handshakes.
-                    self.stream_end_event.clear()
-                    self.start_stream_handler(root)
-                depth += 1
-            if event == b'end':
-                depth -= 1
-                if depth == 0:
-                    # The stream's root element has closed,
-                    # terminating the stream.
-                    log.debug("End of stream recieved")
-                    self.stream_end_event.set()
-                    return False
-                elif depth == 1:
-                    # We only raise events for stanzas that are direct
-                    # children of the root element.
-                    try:
-                        self.__spawn_event(xml)
-                    except RestartStream:
-                        return True
-                    if root is not None:
-                        # Keep the root element empty of children to
-                        # save on memory use.
-                        root.clear()
+        elems = None
+
+        try:
+            for event, xml in ET.iterparse(self.filesocket, (b'end', b'start')):
+                if event == b'start':
+                    if depth == 0:
+                        # We have received the start of the root element.
+                        root = xml
+                        # Perform any stream initialization actions, such
+                        # as handshakes.
+                        self.stream_end_event.clear()
+                        self.start_stream_handler(root)
+                    depth += 1
+                if event == b'end':
+                    depth -= 1
+                    if depth == 0:
+                        # The stream's root element has closed,
+                        # terminating the stream.
+                        log.debug("End of stream recieved")
+                        self.stream_end_event.set()
+                        return False
+                    elif depth == 1:
+                        # We only raise events for stanzas that are direct
+                        # children of the root element.
+                        try:
+                            self.__spawn_event(xml)
+                        except RestartStream:
+                            return True
+                        if root is not None:
+                            # Keep the root element empty of children to
+                            # save on memory use.
+                            root.clear()
+        except Exception, exc:
+            print "ERROR __read_xml: ",exc
+
         log.debug("Ending read XML loop")
 
     def _build_stanza(self, xml, default_ns=None):
