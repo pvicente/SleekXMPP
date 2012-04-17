@@ -91,7 +91,7 @@ class DiscoInfo(ElementBase):
         """
         ElementBase.setup(self, xml)
 
-        self._identities = set([id[0:3] for id in self['identities']])
+        self._identities = set([tmp_id[0:3] for tmp_id in self['identities']])
         self._features = self['features']
 
     def add_identity(self, category, itype, name=None, lang=None):
@@ -138,10 +138,10 @@ class DiscoInfo(ElementBase):
         if identity in self._identities:
             self._identities.remove(identity)
             for id_xml in self.findall('{%s}identity' % self.namespace):
-                id = (id_xml.attrib['category'],
+                tmp_id = (id_xml.attrib['category'],
                       id_xml.attrib['type'],
                       id_xml.attrib.get('{%s}lang' % self.xml_ns, None))
-                if id == identity:
+                if tmp_id == identity:
                     self.xml.remove(id_xml)
                     return True
         return False
