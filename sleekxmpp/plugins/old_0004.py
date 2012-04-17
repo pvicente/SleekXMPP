@@ -6,9 +6,7 @@
     See the file LICENSE for copying permission.
 """
 from . import base
-import logging
 from xml.etree import cElementTree as ET
-import copy
 import logging
 #TODO support item groups and results
 
@@ -29,18 +27,18 @@ class old_0004(base.base_plugin):
 		log.warning("This implementation of XEP-0004 is deprecated.")
 
 	def handler_message_xform(self, xml):
-		object = self.handle_form(xml)
-		self.xmpp.event("message_form", object)
+		tmp_object = self.handle_form(xml)
+		self.xmpp.event("message_form", tmp_object)
 
 	def handler_presence_xform(self, xml):
-		object = self.handle_form(xml)
-		self.xmpp.event("presence_form", object)
+		tmp_object = self.handle_form(xml)
+		self.xmpp.event("presence_form", tmp_object)
 
 	def handle_form(self, xml):
 		xmlform = xml.find('{jabber:x:data}x')
-		object = self.buildForm(xmlform)
-		self.xmpp.event("message_xform", object)
-		return object
+		tmp_object = self.buildForm(xmlform)
+		self.xmpp.event("message_xform", tmp_object)
+		return tmp_object
 
 	def buildForm(self, xml):
 		form = Form(ftype=xml.attrib['type'])
