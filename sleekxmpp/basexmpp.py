@@ -15,19 +15,18 @@
 from __future__ import with_statement, unicode_literals
 
 import sys
-import copy
 import logging
 
 import sleekxmpp
 from sleekxmpp import plugins, roster
 from sleekxmpp.exceptions import IqError, IqTimeout
 
-from sleekxmpp.stanza import Message, Presence, Iq, Error, StreamError
+from sleekxmpp.stanza import Message, Presence, Iq, StreamError
 from sleekxmpp.stanza.roster import Roster
 from sleekxmpp.stanza.nick import Nick
 from sleekxmpp.stanza.htmlim import HTMLIM
 
-from sleekxmpp.xmlstream import XMLStream, JID, tostring
+from sleekxmpp.xmlstream import XMLStream, JID
 from sleekxmpp.xmlstream import ET, register_stanza_plugin
 from sleekxmpp.xmlstream.matcher import *
 from sleekxmpp.xmlstream.handler import *
@@ -286,10 +285,10 @@ class BaseXMPP(XMLStream):
         """Create a Presence stanza associated with this stream."""
         return Presence(self, *args, **kwargs)
 
-    def make_iq(self, id=0, ifrom=None, ito=None, itype=None, iquery=None):
+    def make_iq(self, uid=0, ifrom=None, ito=None, itype=None, iquery=None):
         """Create a new Iq stanza with a given Id and from JID.
 
-        :param id: An ideally unique ID value for this stanza thread.
+        :param uid: An ideally unique ID value for this stanza thread.
                    Defaults to 0.
         :param ifrom: The from :class:`~sleekxmpp.xmlstream.jid.JID` 
                       to use for this stanza.
@@ -301,7 +300,7 @@ class BaseXMPP(XMLStream):
         :param iquery: Optional namespace for adding a query element.
         """
         iq = self.Iq()
-        iq['id'] = str(id)
+        iq['uid'] = str(uid)
         iq['to'] = ito
         iq['from'] = ifrom
         iq['type'] = itype
@@ -331,12 +330,12 @@ class BaseXMPP(XMLStream):
             iq['from'] = ifrom
         return iq
 
-    def make_iq_result(self, id=None, ito=None, ifrom=None, iq=None):
+    def make_iq_result(self, uid=None, ito=None, ifrom=None, iq=None):
         """
         Create an :class:`~sleekxmpp.stanza.iq.Iq` stanza of type 
         ``'result'`` with the given ID value.
 
-        :param id: An ideally unique ID value. May use :meth:`new_id()`.
+        :param uid: An ideally unique ID value. May use :meth:`new_id()`.
         :param ito: The destination :class:`~sleekxmpp.xmlstream.jid.JID`
                     for this stanza.
         :param ifrom: The ``'from'`` :class:`~sleekxmpp.xmlstream.jid.JID`
@@ -346,9 +345,9 @@ class BaseXMPP(XMLStream):
         """
         if not iq:
             iq = self.Iq()
-            if id is None:
-                id = self.new_id()
-            iq['id'] = id
+            if uid is None:
+                uid = self.new_id()
+            iq['uid'] = uid
         iq['type'] = 'result'
         if ito:
             iq['to'] = ito
@@ -386,14 +385,14 @@ class BaseXMPP(XMLStream):
             iq['from'] = ifrom
         return iq
 
-    def make_iq_error(self, id, type='cancel',
+    def make_iq_error(self, uid, error_type='cancel',
                       condition='feature-not-implemented',
                       text=None, ito=None, ifrom=None, iq=None):
         """
-        Create an :class:`~sleekxmpp.stanza.iq.Iq` stanza of type ``'error'``.
+        Create an :class:`~sleekxmpp.stanza.iq.Iq` stanza of error_type ``'error'``.
 
-        :param id: An ideally unique ID value. May use :meth:`new_id()`.
-        :param type: The type of the error, such as ``'cancel'`` or 
+        :param uid: An ideally unique ID value. May use :meth:`new_id()`.
+        :param error_type: The error_type of the error, such as ``'cancel'`` or 
                      ``'modify'``. Defaults to ``'cancel'``.
         :param condition: The error condition. Defaults to 
                           ``'feature-not-implemented'``.
@@ -407,8 +406,8 @@ class BaseXMPP(XMLStream):
         """
         if not iq:
             iq = self.Iq()
-        iq['id'] = id
-        iq['error']['type'] = type
+        iq['uid'] = uid
+        iq['error']['error_type'] = error_type
         iq['error']['condition'] = condition
         iq['error']['text'] = text
         if ito:
