@@ -1,7 +1,3 @@
-import sys
-import time
-import threading
-
 from sleekxmpp.test import *
 from sleekxmpp.xmlstream import ElementBase
 

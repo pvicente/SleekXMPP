@@ -44,7 +44,7 @@ md5_data = {
     'setuptools-0.6c6-py2.5.egg': 'b2f8a7520709a5b34f80946de5f02f53',
 }
 
-import sys, os
+import os
 
 def _validate_md5(egg_name, data):
     if egg_name in md5_data:
@@ -113,7 +113,7 @@ def download_setuptools(
     with a '/'). `to_dir` is the directory where the egg will be downloaded.
     `delay` is the number of seconds to pause before an actual download attempt.
     """
-    import urllib2, shutil
+    import urllib2
     egg_name = "setuptools-%s-py%s.egg" % (version,sys.version[:3])
     url = download_base + egg_name
     saveto = os.path.join(to_dir, egg_name)
