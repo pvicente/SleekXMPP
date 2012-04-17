@@ -24,9 +24,9 @@ def run_tests():
                 testfiles.append('tests.%s' % splitext(basename(t))[0])
 
     suites = []
-    for file in testfiles:
-        __import__(file)
-        suites.append(sys.modules[file].suite)
+    for filename in testfiles:
+        __import__(filename)
+        suites.append(sys.modules[filename].suite)
 
     tests = unittest.TestSuite(suites)
     runner = unittest.TextTestRunner(verbosity=2)
