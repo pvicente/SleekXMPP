@@ -2,8 +2,7 @@ from __future__ import with_statement
 from . import base
 import logging
 #from xml.etree import cElementTree as ET
-from .. xmlstream.stanzabase import registerStanzaPlugin, ElementBase, ET
-from . import stanza_pubsub
+from .. xmlstream.stanzabase import ET
 from . xep_0004 import Form
 
 
@@ -52,7 +51,7 @@ class xep_0060(base.base_plugin):
 		iq = self.xmpp.makeIqSet(pubsub)
 		iq.attrib['to'] = jid
 		iq.attrib['from'] = self.xmpp.boundjid.full
-		id = iq['id']
+#		id = iq['id']
 		result = iq.send()
 		if result is False or result is None or result['type'] == 'error': return False
 		return True
@@ -72,7 +71,7 @@ class xep_0060(base.base_plugin):
 		iq = self.xmpp.makeIqSet(pubsub)
 		iq.attrib['to'] = jid
 		iq.attrib['from'] = self.xmpp.boundjid.full
-		id = iq['id']
+#		id = iq['id']
 		result = iq.send()
 		if result is False or result is None or result['type'] == 'error': return False
 		return True
@@ -92,7 +91,7 @@ class xep_0060(base.base_plugin):
 		iq = self.xmpp.makeIqSet(pubsub)
 		iq.attrib['to'] = jid
 		iq.attrib['from'] = self.xmpp.boundjid.full
-		id = iq['id']
+#		id = iq['id']
 		result = iq.send()
 		if result is False or result is None or result['type'] == 'error': return False
 		return True
@@ -110,7 +109,7 @@ class xep_0060(base.base_plugin):
 		iq.append(pubsub)
 		iq.attrib['to'] = jid
 		iq.attrib['from'] = self.xmpp.boundjid.full
-		id = iq['id']
+#		id = iq['id']
 		#self.xmpp.add_handler("<iq id='%s'/>" % id, self.handlerCreateNodeResponse)
 		result = iq.send()
 		if result is None or result == False or result['type'] == 'error':
@@ -134,7 +133,7 @@ class xep_0060(base.base_plugin):
 		iq.append(pubsub)
 		iq.attrib['to'] = jid
 		iq.attrib['from'] = self.xmpp.boundjid.full
-		id = iq['id']
+#		id = iq['id']
 		result = iq.send()
 		if result is None or result == False or result['type'] == 'error':
 			log.warning("got error instead of config")
@@ -157,7 +156,7 @@ class xep_0060(base.base_plugin):
 		iq.append(pubsub)
 		iq.attrib['to'] = jid
 		iq.attrib['from'] = self.xmpp.boundjid.full
-		id = iq['id']
+#		id = iq['id']
 		result = iq.send()
 		if result is None or result == False or result['type'] == 'error':
 			log.warning("got error instead of config")
@@ -197,7 +196,7 @@ class xep_0060(base.base_plugin):
 		iq = self.xmpp.makeIqSet(pubsub)
 		iq.attrib['to'] = jid
 		iq.attrib['from'] = self.xmpp.boundjid.full
-		id = iq['id']
+#		id = iq['id']
 		result = iq.send()
 		if result is None or result['type'] == 'error':
 			return False
@@ -208,17 +207,17 @@ class xep_0060(base.base_plugin):
 		publish = ET.Element('publish')
 		publish.attrib['node'] = node
 		for pub_item in items:
-			id, payload = pub_item
+			tmp_id, payload = pub_item
 			item = ET.Element('item')
-			if id is not None:
-				item.attrib['id'] = id
+			if tmp_id is not None:
+				item.attrib['id'] = tmp_id
 			item.append(payload)
 			publish.append(item)
 		pubsub.append(publish)
 		iq = self.xmpp.makeIqSet(pubsub)
 		iq.attrib['to'] = jid
 		iq.attrib['from'] = self.xmpp.boundjid.full
-		id = iq['id']
+#		id = iq['id']
 		result = iq.send()
 		if result is None or result is False or result['type'] == 'error': return False
 		return True
@@ -237,7 +236,7 @@ class xep_0060(base.base_plugin):
 		iq = self.xmpp.makeIqSet(pubsub)
 		iq.attrib['to'] = jid
 		iq.attrib['from'] = self.xmpp.boundjid.full
-		id = iq['id']
+#		id = iq['id']
 		result = iq.send()
 		if result is None or result is False or result['type'] == 'error': return False
 		return True
@@ -288,23 +287,9 @@ class xep_0060(base.base_plugin):
 		iq = self.xmpp.makeIqSet(pubsub)
 		iq.attrib['to'] = ps_jid
 		iq.attrib['from'] = self.xmpp.boundjid.full
-		id = iq['id']
+#		id = iq['id']
 		result = iq.send()
 		if result is None or result is False or result['type'] == 'error':
-		    return False
-		return True
-
-	def addNodeToCollection(self, jid, child, parent=''):
-		config = self.getNodeConfig(jid, child)
-		if not config or config is None:
-			self.lasterror = "Config Error"
-			return False
-		try:
-			config.field['pubsub#collection'].setValue(parent)
-		except KeyError:
-			log.warning("pubsub#collection doesn't exist in config, trying to add it")
-			config.addField('pubsub#collection', value=parent)
-		if not self.setNodeConfig(jid, child, config):
 			return False
 		return True
 
