@@ -7,7 +7,6 @@
 """
 from __future__ import with_statement
 from . import base
-import logging
 from xml.etree import cElementTree as ET
 import time
 
@@ -44,16 +43,16 @@ class old_0050(base.base_plugin):
 	
 	def handler_command(self, xml):
 		in_command = xml.find('{http://jabber.org/protocol/commands}command')
-		sessionid = in_command.get('sessionid', None)
+		#sessionid = in_command.get('sessionid', None)
 		node = in_command.get('node')
 		sessionid = self.getNewSession()
-		name, form, pointer, multi = self.commands[node]
+		_, form, pointer, multi = self.commands[node]
 		self.sessions[sessionid] = {}
 		self.sessions[sessionid]['jid'] = xml.get('from')
 		self.sessions[sessionid]['to'] = xml.get('to')
 		self.sessions[sessionid]['past'] = [(form, None)]
 		self.sessions[sessionid]['next'] = pointer
-		npointer = pointer
+		#npointer = pointer
 		if multi:
 			actions = ['next']
 			status = 'executing'
@@ -64,7 +63,7 @@ class old_0050(base.base_plugin):
 			else:
 				status = 'executing'
 				actions = ['complete']
-		self.xmpp.send(self.makeCommand(xml.attrib['from'], in_command.attrib['node'], form=form, id=xml.attrib['id'], sessionid=sessionid, status=status, actions=actions))
+		self.xmpp.send(self.makeCommand(xml.attrib['from'], in_command.attrib['node'], form=form, uid=xml.attrib['id'], sessionid=sessionid, status=status, actions=actions))
 	
 	def handler_command_complete(self, xml):
 		in_command = xml.find('{http://jabber.org/protocol/commands}command')
@@ -73,18 +72,18 @@ class old_0050(base.base_plugin):
 		results = self.xmpp.plugin['old_0004'].makeForm('result')
 		results.fromXML(in_command.find('{jabber:x:data}x'))
 		pointer(results,sessionid)
-		self.xmpp.send(self.makeCommand(xml.attrib['from'], in_command.attrib['node'], form=None, id=xml.attrib['id'], sessionid=sessionid, status='completed', actions=[]))
+		self.xmpp.send(self.makeCommand(xml.attrib['from'], in_command.attrib['node'], form=None, uid=xml.attrib['id'], sessionid=sessionid, status='completed', actions=[]))
 		del self.sessions[in_command.get('sessionid')]
 		
 	
 	def handler_command_next(self, xml):
 		in_command = xml.find('{http://jabber.org/protocol/commands}command')
 		sessionid = in_command.get('sessionid', None)
-		pointer = self.sessions[sessionid]['next']
+		pointer = self.sessions[sessionid]['tmp_next']
 		results = self.xmpp.plugin['old_0004'].makeForm('result')
 		results.fromXML(in_command.find('{jabber:x:data}x'))
-		form, npointer, next = pointer(results,sessionid)
-		self.sessions[sessionid]['next'] = npointer
+		form, npointer, tmp_next = pointer(results,sessionid)
+		self.sessions[sessionid]['tmp_next'] = npointer
 		self.sessions[sessionid]['past'].append((form, pointer))
 		actions = []
 		actions.append('prev')
@@ -92,11 +91,11 @@ class old_0050(base.base_plugin):
 			status = 'completed'
 		else:
 			status = 'executing'
-			if next:
-				actions.append('next')
+			if tmp_next:
+				actions.append('tmp_next')
 			else:
 				actions.append('complete')
-		self.xmpp.send(self.makeCommand(xml.attrib['from'], in_command.attrib['node'], form=form, id=xml.attrib['id'], sessionid=sessionid, status=status, actions=actions))
+		self.xmpp.send(self.makeCommand(xml.attrib['from'], in_command.attrib['node'], form=form, uid=xml.attrib['id'], sessionid=sessionid, status=status, actions=actions))
 		
 	def handler_command_cancel(self, xml):
 		command = xml.find('{http://jabber.org/protocol/commands}command')
@@ -104,12 +103,12 @@ class old_0050(base.base_plugin):
 			del self.sessions[command.get('sessionid')]
 		except:
 			pass
-		self.xmpp.send(self.makeCommand(xml.attrib['from'], command.attrib['node'], id=xml.attrib['id'], sessionid=command.attrib['sessionid'], status='canceled'))
+		self.xmpp.send(self.makeCommand(xml.attrib['from'], command.attrib['node'], uid=xml.attrib['id'], sessionid=command.attrib['sessionid'], status='canceled'))
 
-	def makeCommand(self, to, node, id=None, form=None, sessionid=None, status='executing', actions=[]):
-		if not id:
-			id = self.xmpp.getNewId()
-		iq = self.xmpp.makeIqResult(id)
+	def makeCommand(self, to, node, uid=None, form=None, sessionid=None, status='executing', actions=[]):
+		if not uid:
+			uid = self.xmpp.getNewId()
+		iq = self.xmpp.makeIqResult(uid)
 		iq.attrib['from'] = self.xmpp.boundjid.full
 		iq.attrib['to'] = to
 		command = ET.Element('{http://jabber.org/protocol/commands}command')

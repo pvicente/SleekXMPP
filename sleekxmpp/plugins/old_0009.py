@@ -3,9 +3,7 @@ XEP-0009 XMPP Remote Procedure Calls
 """
 from __future__ import with_statement
 from . import base
-import logging
 from xml.etree import cElementTree as ET
-import copy
 import time
 import base64
 
