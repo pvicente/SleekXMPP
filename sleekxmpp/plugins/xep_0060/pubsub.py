@@ -299,7 +299,7 @@ class xep_0060(base_plugin):
         iq['pubsub_owner']['configure']['form'].values = config.values
         return iq.send(block=block, callback=callback, timeout=timeout)
 
-    def publish(self, jid, node, id=None, payload=None, options=None,
+    def publish(self, jid, node, uid=None, payload=None, options=None,
                 ifrom=None, block=True, callback=None, timeout=None):
         """
         Add a new item to a node, or edit an existing item.
@@ -318,7 +318,7 @@ class xep_0060(base_plugin):
         Arguments:
             jid      -- The JID of the pubsub service.
             node     -- The node to publish the item to.
-            id       -- Optionally specify the ID of the item.
+            uid       -- Optionally specify the ID of the item.
             payload  -- The item content to publish.
             options  -- A form of publish options.
             ifrom    -- Specify the sender's JID.
@@ -332,14 +332,14 @@ class xep_0060(base_plugin):
         """
         iq = self.xmpp.Iq(sto=jid, sfrom=ifrom, stype='set')
         iq['pubsub']['publish']['node'] = node
-        if id is not None:
-            iq['pubsub']['publish']['item']['id'] = id
+        if uid is not None:
+            iq['pubsub']['publish']['item']['id'] = uid
         if payload is not None:
             iq['pubsub']['publish']['item']['payload'] = payload
         iq['pubsub']['publish_options'] = options
         return iq.send(block=block, callback=callback, timeout=timeout)
 
-    def retract(self, jid, node, id, notify=None, ifrom=None, block=True,
+    def retract(self, jid, node, uid, notify=None, ifrom=None, block=True,
                 callback=None, timeout=None):
         """
         Delete a single item from a node.
@@ -348,7 +348,7 @@ class xep_0060(base_plugin):
 
         iq['pubsub']['retract']['node'] = node
         iq['pubsub']['retract']['notify'] = notify
-        iq['pubsub']['retract']['item']['id'] = id
+        iq['pubsub']['retract']['item']['id'] = uid
         return iq.send(block=block, callback=callback, timeout=timeout)
 
     def purge(self, jid, node, ifrom=None, block=True, callback=None,

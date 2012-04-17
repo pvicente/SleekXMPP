@@ -416,7 +416,7 @@ class TestStreamPubsub(SleekTest):
         self.xmpp['xep_0060'].publish(
             'pubsub.example.com',
             'somenode',
-            id='id42',
+            uid='id42',
             payload=payload,
             block=False)
         self.send("""
@@ -450,7 +450,7 @@ class TestStreamPubsub(SleekTest):
         self.xmpp['xep_0060'].publish(
             'pubsub.example.com',
             'somenode',
-            id='ID42',
+            uid='ID42',
             payload=payload,
             options=options,
             block=False)
