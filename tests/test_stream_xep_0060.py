@@ -1,5 +1,3 @@
-import sys
-import time
 import threading
 
 from sleekxmpp.test import *
@@ -478,7 +476,7 @@ class TestStreamPubsub(SleekTest):
           </iq>
         """, use_values=False)
 
-    def testRetract(self):
+    def testRetractNotify(self):
         """Test deleting an item."""
         self.xmpp['xep_0060'].retract(
             'pubsub.example.com',
