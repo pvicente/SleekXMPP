@@ -6,10 +6,7 @@
     See the file LICENSE for copying permission.
 """
 
-import logging
 
-import sleekxmpp
-from sleekxmpp import Iq
 from sleekxmpp.xmlstream import register_stanza_plugin
 from sleekxmpp.plugins.base import base_plugin
 from sleekxmpp.plugins.xep_0004 import Form

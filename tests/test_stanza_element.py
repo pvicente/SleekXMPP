@@ -137,7 +137,7 @@ class TestElementBase(SleekTest):
             sub_interfaces = set(('baz',))
 
             def getQux(self):
-              return 'qux'
+                return 'qux'
 
         class TestStanzaPlugin(ElementBase):
             name = "foobar"
