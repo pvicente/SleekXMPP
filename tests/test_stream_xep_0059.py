@@ -14,7 +14,7 @@ class TestStreamSet(SleekTest):
     def tearDown(self):
         self.stream_close()
 
-    def iter(self, rev=False):
+    def my_iter(self, rev=False):
         q = self.xmpp.Iq()
         q['type'] = 'get'
         it = ResultIterator(q, 'disco_items', '1', reverse=rev)
@@ -25,7 +25,7 @@ class TestStreamSet(SleekTest):
     def testResultIterator(self):
         self.items = []
         self.stream_start(mode='client')
-        t = threading.Thread(target=self.iter)
+        t = threading.Thread(target=self.my_iter)
         t.start()
         self.send("""
           <iq type="get" id="2">
@@ -92,7 +92,7 @@ class TestStreamSet(SleekTest):
         self.items = []
         self.stream_start(mode='client')
 
-        t = threading.Thread(target=self.iter, args=(True,))
+        t = threading.Thread(target=self.my_iter, args=(True,))
         t.start()
 
         self.send("""
