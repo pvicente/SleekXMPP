@@ -161,7 +161,8 @@ class Scheduler(object):
                             else:
                                 break
                         for task in cleanup:
-                            x = self.schedule.pop(self.schedule.index(task))
+                            self.schedule.pop(self.schedule.index(task))
+                            #x = self.schedule.pop(self.schedule.index(task))
                     else:
                         updated = True
                         self.schedule_lock.acquire()
@@ -223,6 +224,6 @@ class Scheduler(object):
         finally:
             self.schedule_lock.release()
 
-    def quit(self):
+    def shutdown(self):
         """Shutdown the scheduler."""
         self.run = False
