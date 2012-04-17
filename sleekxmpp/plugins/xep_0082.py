@@ -6,7 +6,6 @@
     See the file LICENSE for copying permission.
 """
 
-import logging
 import datetime as dt
 
 from sleekxmpp.plugins.base import base_plugin
@@ -101,7 +100,7 @@ def date(year=None, month=None, day=None, obj=False):
         return value 
     return format_date(value)
 
-def time(hour=None, min=None, sec=None, micro=None, offset=None, obj=False):
+def time(hour=None, minutes=None, sec=None, micro=None, offset=None, obj=False):
     """
     Create a time only timestamp for the given instant.
 
@@ -109,7 +108,7 @@ def time(hour=None, min=None, sec=None, micro=None, offset=None, obj=False):
 
     Arguments:
         hour   -- Integer value of the hour.
-        min    -- Integer value of the number of minutes.
+        minutes    -- Integer value of the number of minutes.
         sec    -- Integer value of the number of seconds.
         micro  -- Integer value of the number of microseconds.
         offset -- Either a positive or negative number of seconds
@@ -121,8 +120,8 @@ def time(hour=None, min=None, sec=None, micro=None, offset=None, obj=False):
     now = dt.datetime.utcnow()
     if hour is None:
         hour = now.hour
-    if min is None:
-        min = now.minute
+    if minutes is None:
+        minutes = now.minute
     if sec is None:
         sec = now.second
     if micro is None:
@@ -131,13 +130,13 @@ def time(hour=None, min=None, sec=None, micro=None, offset=None, obj=False):
         offset = tzutc()
     elif not isinstance(offset, dt.tzinfo):
         offset = tzoffset(None, offset)
-    value = dt.time(hour, min, sec, micro, offset)
+    value = dt.time(hour, minutes, sec, micro, offset)
     if obj:
         return value
     return format_time(value)
 
 def datetime(year=None, month=None, day=None, hour=None,
-             min=None, sec=None, micro=None, offset=None,
+             minutes=None, sec=None, micro=None, offset=None,
              separators=True, obj=False):
     """
     Create a datetime timestamp for the given instant.
@@ -149,7 +148,7 @@ def datetime(year=None, month=None, day=None, hour=None,
         month  -- Integer value of the month
         day    -- Integer value of the day of the month.
         hour   -- Integer value of the hour.
-        min    -- Integer value of the number of minutes.
+        minutes    -- Integer value of the number of minutes.
         sec    -- Integer value of the number of seconds.
         micro  -- Integer value of the number of microseconds.
         offset -- Either a positive or negative number of seconds
@@ -167,8 +166,8 @@ def datetime(year=None, month=None, day=None, hour=None,
         day = now.day
     if hour is None:
         hour = now.hour
-    if min is None:
-        min = now.minute
+    if minutes is None:
+        minutes = now.minute
     if sec is None:
         sec = now.second
     if micro is None:
@@ -179,7 +178,7 @@ def datetime(year=None, month=None, day=None, hour=None,
         offset = tzoffset(None, offset)
 
     value = dt.datetime(year, month, day, hour,
-                       min, sec, micro, offset)
+                       minutes, sec, micro, offset)
     if obj:
         return value 
     return format_datetime(value)
