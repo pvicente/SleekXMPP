@@ -24,7 +24,6 @@ import ssl
 import sys
 import threading
 import time
-import types
 import random
 import weakref
 try:
@@ -744,7 +743,7 @@ class XMLStream(object):
         del self.__root_stanza[stanza_class]
 
     def add_handler(self, mask, pointer, name=None, disposable=False,
-                    threaded=False, filter=False, instream=False):
+                    threaded=False, apply_filter=False, instream=False):
         """A shortcut method for registering a handler using XML masks.
 
         The use of :meth:`register_handler()` is preferred.
@@ -758,7 +757,7 @@ class XMLStream(object):
                            after one use.
         :param threaded: **DEPRECATED**.
                        Remains for backwards compatibility.
-        :param filter: **DEPRECATED**.
+        :param apply_filter: **DEPRECATED**.
                        Remains for backwards compatibility.
         :param instream: Indicates if the handler should execute during
                          stream processing and not during normal event
@@ -1337,7 +1336,7 @@ class XMLStream(object):
                         log.exception('Error processing scheduled task')
                         self.exception(e)
                 elif etype == 'event':
-                    func, threaded, disposable = handler
+                    func, threaded, _ = handler
                     try:
                         if threaded:
                             x = threading.Thread(
@@ -1388,6 +1387,7 @@ class XMLStream(object):
                 sent = 0
                 count = 0
                 tries = 0
+                reconnect = None
                 try:
                     while sent < total and not self.stop.is_set():
                         try:
