@@ -126,12 +126,12 @@ class xep_0009(base.base_plugin):
         return iq
 
     def _handle_method_call(self, iq):
-        type = iq['type']
-        if type == 'set':
+        tmp_type = iq['type']
+        if tmp_type == 'set':
             log.debug("Incoming Jabber-RPC call from %s", iq['from'])
             self.xmpp.event('jabber_rpc_method_call', iq)
         else:
-            if type == 'error' and ['rpc_query'] is None:
+            if tmp_type == 'error' and ['rpc_query'] is None:
                 self.handle_error(iq)
             else:
                 log.debug("Incoming Jabber-RPC error from %s", iq['from'])
