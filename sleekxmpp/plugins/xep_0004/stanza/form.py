@@ -79,8 +79,8 @@ class Form(ElementBase):
             del field['type']
         return field
 
-    def getXML(self, type='submit'):
-        self['type'] = type
+    def getXML(self, param_type='submit'):
+        self['type'] = param_type
         log.warning("Form.getXML() is deprecated API compatibility " + \
                     "with plugins/old_0004.py")
         return self.xml
@@ -151,7 +151,7 @@ class Form(ElementBase):
         return fields
 
     def get_instructions(self):
-        instructions = ''
+        #instructions = ''
         instsXML = self.xml.findall('{%s}instructions' % self.namespace)
         return "\n".join([instXML.text for instXML in instsXML])
 

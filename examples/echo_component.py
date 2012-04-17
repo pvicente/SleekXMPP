@@ -14,7 +14,6 @@ import logging
 import getpass
 from optparse import OptionParser
 
-import sleekxmpp
 from sleekxmpp.componentxmpp import ComponentXMPP
 
 # Python versions before 3.0 do not use UTF-8 encoding
