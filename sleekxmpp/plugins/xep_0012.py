@@ -13,7 +13,7 @@ from . import base
 from .. stanza.iq import Iq
 from .. xmlstream.handler.callback import Callback
 from .. xmlstream.matcher.xpath import MatchXPath
-from .. xmlstream import ElementBase, ET, JID, register_stanza_plugin
+from .. xmlstream import ElementBase, JID, register_stanza_plugin
 
 
 log = logging.getLogger(__name__)
@@ -85,7 +85,8 @@ class xep_0012(base.base_plugin):
             result = LastActivity()
             td = (datetime.now() - self._start_datetime)
             result['seconds'] = td.seconds + td.days * 24 * 3600
-            reply = iq.reply().setPayload(result.xml).send()
+            #reply = iq.reply().setPayload(result.xml).send()
+            iq.reply().setPayload(result.xml).send()
         else:
             barejid = JID(jid).bare
             if barejid in self.xmpp.roster and ( self.xmpp.roster[barejid]['subscription'] in ('from', 'both') or
@@ -110,6 +111,6 @@ class xep_0012(base.base_plugin):
         iq.append(query.xml)
         iq.attrib['to'] = jid
         iq.attrib['from'] = self.xmpp.boundjid.full
-        id = iq.get('id')
+        #id = iq.get('id')
         result = iq.send()
         return result['last_activity']['seconds']
