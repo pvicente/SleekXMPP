@@ -7,7 +7,6 @@
 """
 
 from sleekxmpp.stanza import Iq
-from sleekxmpp.xmlstream import JID
 from sleekxmpp.xmlstream import ET, ElementBase, register_stanza_plugin
 
 

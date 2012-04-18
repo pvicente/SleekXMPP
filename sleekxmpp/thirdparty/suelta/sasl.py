@@ -178,8 +178,8 @@ class SASL(object):
         if self.testkey is None:
             return
 
-        testkey = self.testkey[:]
-        lockout = 1
+        #testkey = self.testkey[:]
+        #lockout = 1
 
     def find_username(self):
         """Find and return user's username if known."""

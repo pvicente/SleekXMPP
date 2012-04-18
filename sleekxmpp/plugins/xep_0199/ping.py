@@ -9,7 +9,6 @@
 import time
 import logging
 
-import sleekxmpp
 from sleekxmpp import Iq
 from sleekxmpp.exceptions import IqError, IqTimeout
 from sleekxmpp.xmlstream import register_stanza_plugin
@@ -154,11 +153,13 @@ class xep_0199(base_plugin):
         start_time = time.clock()
 
         try:
-            resp = iq.send(block=block,
+            iq.send(block=block,
                            timeout=timeout,
                            callback=callback)
-        except IqError as err:
-            resp = err.iq
+#        except IqError as err:
+        except IqError:
+#            resp = err.iq
+            pass
 
         end_time = time.clock()
 

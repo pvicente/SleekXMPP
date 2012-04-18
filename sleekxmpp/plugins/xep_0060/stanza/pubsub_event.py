@@ -7,7 +7,7 @@
 """
 
 from sleekxmpp import Message
-from sleekxmpp.xmlstream import register_stanza_plugin, ElementBase, ET, JID
+from sleekxmpp.xmlstream import register_stanza_plugin, ElementBase, JID
 from sleekxmpp.plugins.xep_0004 import Form
 
 

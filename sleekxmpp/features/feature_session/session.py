@@ -46,7 +46,8 @@ class feature_session(base_plugin):
         iq = self.xmpp.Iq()
         iq['type'] = 'set'
         iq.enable('session')
-        response = iq.send(now=True)
+        iq.send(now=True)
+#        response = iq.send(now=True)
 
         self.xmpp.features.add('session')
 

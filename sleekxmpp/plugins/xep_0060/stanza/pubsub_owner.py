@@ -7,7 +7,7 @@
 """
 
 from sleekxmpp import Iq
-from sleekxmpp.xmlstream import register_stanza_plugin, ElementBase, ET, JID
+from sleekxmpp.xmlstream import register_stanza_plugin, ElementBase, JID
 from sleekxmpp.plugins.xep_0004 import Form
 from sleekxmpp.plugins.xep_0060.stanza.base import OptionalSetting
 from sleekxmpp.plugins.xep_0060.stanza.pubsub import Affiliations, Affiliation

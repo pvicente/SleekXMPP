@@ -142,8 +142,8 @@ class RosterNode(object):
                            if one is used.
                            Defaults to False.
         """
-        if isinstance(jid, JID):
-            key = jid.bare
+#        if isinstance(jid, JID):
+#            key = jid.bare
         state = {'name': name,
                  'groups': groups or [],
                  'from': afrom,

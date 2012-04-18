@@ -1,11 +1,10 @@
-import sys
 import hmac
 import random
 from base64 import b64encode, b64decode
 
-from sleekxmpp.thirdparty.suelta.util import hash, bytes, num_to_bytes, bytes_to_num, XOR
+from sleekxmpp.thirdparty.suelta.util import hash, bytes, XOR
 from sleekxmpp.thirdparty.suelta.sasl import Mechanism, register_mechanism
-from sleekxmpp.thirdparty.suelta.exceptions import SASLError, SASLCancelled
+from sleekxmpp.thirdparty.suelta.exceptions import SASLCancelled
 
 
 def parse_challenge(challenge):
@@ -53,7 +52,8 @@ class SCRAM_HMAC(Mechanism):
         text = bytes(text)
         ui_1 = self.HMAC(text, salt + b'\0\0\0\01')
         ui = ui_1
-        for i in range(iterations - 1):
+#        for i in range(iterations - 1):
+        for _ in xrange(iterations - 1):
             ui_1 = self.HMAC(text, ui_1)
             ui = XOR(ui, ui_1)
         return ui

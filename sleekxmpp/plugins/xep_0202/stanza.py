@@ -6,12 +6,11 @@
     See the file LICENSE for copying permission.
 """
 
-import logging
 import datetime as dt
 
 from sleekxmpp.xmlstream import ElementBase
 from sleekxmpp.plugins import xep_0082
-from sleekxmpp.thirdparty import tzutc, tzoffset
+from sleekxmpp.thirdparty import tzutc
 
 
 class EntityTime(ElementBase):

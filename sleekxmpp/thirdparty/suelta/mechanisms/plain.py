@@ -1,8 +1,7 @@
-import sys
 
 from sleekxmpp.thirdparty.suelta.util import bytes
 from sleekxmpp.thirdparty.suelta.sasl import Mechanism, register_mechanism
-from sleekxmpp.thirdparty.suelta.exceptions import SASLError, SASLCancelled
+from sleekxmpp.thirdparty.suelta.exceptions import SASLCancelled
 
 
 class PLAIN(Mechanism):
