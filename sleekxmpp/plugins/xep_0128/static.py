@@ -8,9 +8,6 @@
 
 import logging
 
-import sleekxmpp
-from sleekxmpp.plugins.xep_0030 import StaticDisco
-
 
 log = logging.getLogger(__name__)
 

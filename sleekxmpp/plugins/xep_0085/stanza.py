@@ -6,7 +6,6 @@
     See the file LICENSE for copying permissio
 """
 
-import sleekxmpp
 from sleekxmpp.xmlstream import ElementBase, ET
 
 

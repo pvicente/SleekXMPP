@@ -7,8 +7,7 @@
 """
 
 from sleekxmpp.stanza import Error
-from sleekxmpp.xmlstream import ElementBase, ET, register_stanza_plugin
-
+from sleekxmpp.xmlstream import ElementBase, ET
 
 class LegacyError(ElementBase):
 

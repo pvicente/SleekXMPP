@@ -6,7 +6,7 @@
     See the file LICENSE for copying permission.
 """
 
-from sleekxmpp.xmlstream import ElementBase, ET
+from sleekxmpp.xmlstream import ElementBase
 
 
 class Version(ElementBase):

@@ -7,7 +7,6 @@
 """
 
 from sleekxmpp.xmlstream import ElementBase, ET
-from sleekxmpp.plugins.xep_0030.stanza.items import DiscoItems
 
 
 class Set(ElementBase):
