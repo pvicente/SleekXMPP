@@ -5,12 +5,13 @@
 
     See the file LICENSE for copying permission.
 """
+#@PydevCodeAnalysisIgnore
 
 import logging
 
-import sleekxmpp
 from sleekxmpp.plugins.base import base_plugin
 from sleekxmpp.plugins.xep_0059 import Set
+import sleekxmpp.plugins.xep_0059.stanza
 
 
 log = logging.getLogger(__name__)
