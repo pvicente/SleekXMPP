@@ -1,5 +1,5 @@
+#@PydevCodeAnalysisIgnore
 from sleekxmpp.test import *
-from sleekxmpp.stanza.presence import Presence
 
 
 class TestPresenceStanzas(SleekTest):

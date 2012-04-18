@@ -1,3 +1,4 @@
+#@PydevCodeAnalysisIgnore
 import time
 
 from sleekxmpp.test import *
@@ -91,7 +92,8 @@ class TestHandlers(SleekTest):
             iq['type'] = 'set'
             iq['query'] = 'test2'
             try:
-                reply = iq.send(block=True, timeout=0)
+#                reply = iq.send(block=True, timeout=0)
+                iq.send(block=True, timeout=0)
             except IqTimeout:
                 pass
 

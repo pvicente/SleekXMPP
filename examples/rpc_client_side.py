@@ -6,8 +6,7 @@
     See the file LICENSE for copying permission.
 """
 
-from sleekxmpp.plugins.xep_0009.remote import Endpoint, remote, Remote, \
-    ANY_ALL
+from sleekxmpp.plugins.xep_0009.remote import Endpoint, remote, Remote
 import threading
 import time
 

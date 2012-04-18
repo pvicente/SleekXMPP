@@ -1,7 +1,7 @@
+#@PydevCodeAnalysisIgnore
 import threading
 
 from sleekxmpp.test import *
-from sleekxmpp.xmlstream import register_stanza_plugin
 from sleekxmpp.plugins.xep_0030 import DiscoItems
 from sleekxmpp.plugins.xep_0059 import ResultIterator, Set
 

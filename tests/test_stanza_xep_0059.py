@@ -1,3 +1,4 @@
+#@PydevCodeAnalysisIgnore
 from sleekxmpp.test import *
 from sleekxmpp.plugins.xep_0059 import Set
 

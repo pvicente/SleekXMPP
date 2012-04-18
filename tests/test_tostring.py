@@ -1,7 +1,6 @@
+#@PydevCodeAnalysisIgnore
 from sleekxmpp.test import *
-from sleekxmpp.stanza import Message
-from sleekxmpp.xmlstream.stanzabase import ET, ElementBase
-from sleekxmpp.xmlstream.tostring import tostring, xml_escape
+from sleekxmpp.xmlstream.tostring import xml_escape
 
 
 class TestToString(SleekTest):

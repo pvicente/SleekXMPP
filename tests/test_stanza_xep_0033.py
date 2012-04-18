@@ -1,3 +1,4 @@
+#@PydevCodeAnalysisIgnore
 from sleekxmpp.test import *
 import sleekxmpp.plugins.xep_0033 as xep_0033
 

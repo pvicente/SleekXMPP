@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+#@PydevCodeAnalysisIgnore
 #
 # Copyright (C) 2007-2011 Nathanael C. Fritz
 # All Rights Reserved

@@ -1,3 +1,4 @@
+#@PydevCodeAnalysisIgnore
 from sleekxmpp.xmlstream.handler import Callback
 from sleekxmpp.test import *
 

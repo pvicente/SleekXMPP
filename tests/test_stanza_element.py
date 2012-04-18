@@ -1,5 +1,5 @@
+#@PydevCodeAnalysisIgnore
 from sleekxmpp.test import *
-from sleekxmpp.xmlstream.stanzabase import ElementBase
 
 
 class TestElementBase(SleekTest):

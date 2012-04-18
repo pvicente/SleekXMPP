@@ -1,8 +1,8 @@
+#@PydevCodeAnalysisIgnore
 import threading
 
 from sleekxmpp.test import *
 from sleekxmpp.stanza.atom import AtomEntry
-from sleekxmpp.xmlstream import register_stanza_plugin
 
 
 class TestStreamPubsub(SleekTest):

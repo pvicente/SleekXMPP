@@ -25,18 +25,18 @@ def saslprep(text, strict=True):
     #
     #  -  the 'commonly mapped to nothing' characters [StringPrep, B.1]
     #     that can be mapped to nothing.
-    buffer = ''
+    tmp_buffer = ''
     for char in text:
         if stringprep.in_table_c12(char):
-            buffer += ' '
+            tmp_buffer += ' '
         elif not stringprep.in_table_b1(char):
-            buffer += char
+            tmp_buffer += char
 
     # Normalization using form KC
-    text = unicodedata.normalize('NFKC', buffer)
+    text = unicodedata.normalize('NFKC', tmp_buffer)
 
     # Check for bidirectional string
-    buffer = ''
+    tmp_buffer = ''
     first_is_randal = False
     if text:
         first_is_randal = stringprep.in_table_d1(text[0])

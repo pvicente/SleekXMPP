@@ -1,3 +1,4 @@
+#@PydevCodeAnalysisIgnore
 import threading
 
 from sleekxmpp.test import *

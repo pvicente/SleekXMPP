@@ -1,5 +1,5 @@
+#@PydevCodeAnalysisIgnore
 from sleekxmpp.test import *
-from sleekxmpp.xmlstream import ElementBase
 
 
 class TestStreamExtendedDisco(SleekTest):

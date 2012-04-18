@@ -8,7 +8,6 @@
 
 from sleekxmpp.stanza.error import Error
 from sleekxmpp.xmlstream import StanzaBase
-from sleekxmpp.xmlstream import register_stanza_plugin
 
 
 class StreamError(Error, StanzaBase):

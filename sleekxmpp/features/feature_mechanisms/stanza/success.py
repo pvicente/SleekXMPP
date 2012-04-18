@@ -7,7 +7,6 @@
 """
 
 from sleekxmpp.xmlstream import StanzaBase
-from sleekxmpp.xmlstream import register_stanza_plugin
 
 class Success(StanzaBase):
 

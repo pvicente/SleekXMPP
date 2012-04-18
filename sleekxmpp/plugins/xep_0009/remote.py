@@ -489,9 +489,9 @@ class RemoteSession(object):
                 raise ValueError("Unknown callback!")
         pass
 
-    def _find_key(self, dict, value):
+    def _find_key(self, param_dict, value):
         """return the key of dictionary dic given the value"""
-        search = [k for k, v in dict.iteritems() if v == value]
+        search = [k for k, v in param_dict.iteritems() if v == value]
         if len(search) == 0:
             return None
         else:
@@ -657,8 +657,8 @@ class RemoteSession(object):
     def _on_jabber_rpc_error(self, iq):
         pid = iq['id']
         pmethod = self._client.plugin['xep_0009']._extract_method(iq['rpc_query'])
-        code = iq['error']['code']
-        type = iq['error']['type']
+#        code = iq['error']['code']
+#        type = iq['error']['type']
         condition = iq['error']['condition']
         #! print("['REMOTE.PY']._BINDING_handle_remote_procedure_error -> ERROR! ERROR! ERROR! Condition is '%s'" % condition)
         with self._lock:

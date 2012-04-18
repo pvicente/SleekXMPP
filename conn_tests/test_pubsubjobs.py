@@ -84,7 +84,7 @@ class TestPubsubServer(unittest.TestCase):
 		w = Waiter('wait publish', StanzaPath('message/pubsub_event/items'))
 		self.xmpp2.registerHandler(w)
 		#result = self.xmpp1['xep_0060'].setItem(self.pshost, "testnode2", (('test1', item),))
-		result = self.xmpp1['jobs'].createJob(self.pshost, "testnode2", 'test1', item)
+		self.xmpp1['jobs'].createJob(self.pshost, "testnode2", 'test1', item)
 		msg = w.wait(5) # got to get a result in 5 seconds
 		self.failUnless(msg != False, "Account #2 did not get message event")
 		#result = self.xmpp1['xep_0060'].setItem(self.pshost, "testnode2", (('test2', item),))

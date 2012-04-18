@@ -1,3 +1,4 @@
+#@PydevCodeAnalysisIgnore
 from sleekxmpp.test import *
 import sleekxmpp.plugins.gmail_notify as gmail
 

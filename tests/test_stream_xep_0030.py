@@ -1,3 +1,4 @@
+#@PydevCodeAnalysisIgnore
 import time
 import threading
 

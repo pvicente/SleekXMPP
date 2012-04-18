@@ -1,3 +1,4 @@
+#@PydevCodeAnalysisIgnore
 from sleekxmpp.test import *
 import sleekxmpp.plugins.xep_0004 as xep_0004
 import sleekxmpp.plugins.xep_0060.stanza as pubsub

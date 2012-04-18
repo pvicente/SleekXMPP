@@ -1,3 +1,4 @@
+#@PydevCodeAnalysisIgnore
 """
     SleekXMPP: The Sleek XMPP Library
     Copyright (C) 2011  Nathanael C. Fritz
