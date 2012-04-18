@@ -182,7 +182,7 @@ class Configure(ElementBase):
     def getType(self):
         t = self._get_attr('type')
         if not t:
-            t == 'leaf'
+            t == 'leaf' #FIXME: TO check 3 failed test with t = 'leaf'
         return t
 
 
