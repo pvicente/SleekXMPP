@@ -1,5 +1,4 @@
 import time
-import threading
 
 from sleekxmpp.test import *
 

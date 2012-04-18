@@ -1,8 +1,6 @@
-import threading
 import time
 
 from sleekxmpp.test import *
-
 
 class TestStreamChatStates(SleekTest):
 

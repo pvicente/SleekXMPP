@@ -47,7 +47,7 @@ class TestSetStanzas(SleekTest):
           </set>
         """)
 
-    def testGetBefore(self):
+    def testGetBeforeExpected(self):
         xml_string = """
           <set xmlns="http://jabber.org/protocol/rsm">
             <before />
@@ -79,7 +79,7 @@ class TestSetStanzas(SleekTest):
           </set>
         """)
 
-    def testGetBeforeVal(self):
+    def testGetBeforeValExpectedId(self):
         xml_string = """
           <set xmlns="http://jabber.org/protocol/rsm">
             <before>id</before>

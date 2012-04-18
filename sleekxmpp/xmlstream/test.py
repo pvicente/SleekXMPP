@@ -1,5 +1,4 @@
 import xmlstream
-import time
 import socket
 from handler.callback import Callback
 from matcher.xpath import MatchXPath
@@ -11,7 +10,8 @@ def server():
 	s.listen(1)
 	servers = []
 	while True:
-		conn, addr = s.accept()
+#		conn, addr = s.accept()
+		conn, _ = s.accept()
 		server = xmlstream.XMLStream(conn, 'localhost', 5228)
 		server.registerHandler(Callback('test', MatchXPath('test'), testHandler))
 		server.process()

@@ -406,7 +406,7 @@ class TestPubsubStanzas(SleekTest):
             </event>
           </message>""")
 
-    def testItemsEvent(self):
+    def testItemsEvent2(self):
         """Testing message/pubsub_event/items/item & retract mix"""
         msg = self.Message()
         item = pubsub.EventItem()

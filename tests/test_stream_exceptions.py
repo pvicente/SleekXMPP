@@ -1,8 +1,4 @@
-import sys
-import sleekxmpp
-from sleekxmpp.xmlstream.matcher import MatchXPath
 from sleekxmpp.xmlstream.handler import Callback
-from sleekxmpp.exceptions import XMPPError
 from sleekxmpp.test import *
 
 
@@ -217,7 +213,7 @@ class TestStreamExceptions(SleekTest):
 
         self.assertEqual(raised_errors, [True], "Exception was not raised: %s" % raised_errors)
 
-    def testUnknownException(self):
+    def testUnknownExceptionReceive(self):
         """Test Sleek continues to respond after an unknown exception."""
 
         raised_errors = []

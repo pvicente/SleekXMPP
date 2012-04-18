@@ -1,4 +1,3 @@
-from sleekxmpp import Iq
 from sleekxmpp.test import *
 from sleekxmpp.plugins.xep_0050 import Command
 

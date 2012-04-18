@@ -1,5 +1,4 @@
 from sleekxmpp.test import *
-from sleekxmpp.stanza.roster import Roster
 
 
 class TestRosterStanzas(SleekTest):

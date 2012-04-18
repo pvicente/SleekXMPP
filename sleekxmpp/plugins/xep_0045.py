@@ -216,7 +216,8 @@ class xep_0045(base.base_plugin):
         iq.append(query)
         # For now, swallow errors to preserve existing API
         try:
-            result = iq.send()
+            #result = iq.send()
+            iq.send()
         except IqError:
             return False
         except IqTimeout:
@@ -265,7 +266,8 @@ class xep_0045(base.base_plugin):
         iq.append(query)
         # For now, swallow errors to preserve existing API
         try:
-            r = iq.send()
+            #r = iq.send()
+            iq.send()
         except IqError:
             return False
         except IqTimeout:
@@ -287,7 +289,8 @@ class xep_0045(base.base_plugin):
         iq['from'] = ifrom
         # For now, swallow errors to preserve existing API
         try:
-            result = iq.send()
+            #result = iq.send()
+            iq.send()
         except IqError:
             return False
         except IqTimeout:

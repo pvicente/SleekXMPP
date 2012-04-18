@@ -1,6 +1,5 @@
 import time
 
-from sleekxmpp import Message
 from sleekxmpp.test import *
 from sleekxmpp.xmlstream.handler import *
 from sleekxmpp.xmlstream.matcher import *
