@@ -6,12 +6,8 @@
     See the file LICENSE for copying permission.
 """
 
-import copy
-
-from sleekxmpp.thirdparty import OrderedDict
-
 from sleekxmpp import Message
-from sleekxmpp.xmlstream import register_stanza_plugin, ElementBase, ET
+from sleekxmpp.xmlstream import register_stanza_plugin
 from sleekxmpp.xmlstream.handler import Callback
 from sleekxmpp.xmlstream.matcher import StanzaPath
 from sleekxmpp.plugins.base import base_plugin

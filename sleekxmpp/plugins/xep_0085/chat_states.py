@@ -8,11 +8,10 @@
 
 import logging
 
-import sleekxmpp
 from sleekxmpp.stanza import Message
 from sleekxmpp.xmlstream.handler import Callback
 from sleekxmpp.xmlstream.matcher import StanzaPath
-from sleekxmpp.xmlstream import register_stanza_plugin, ElementBase, ET
+from sleekxmpp.xmlstream import register_stanza_plugin
 from sleekxmpp.plugins.base import base_plugin
 from sleekxmpp.plugins.xep_0085 import stanza, ChatState
 

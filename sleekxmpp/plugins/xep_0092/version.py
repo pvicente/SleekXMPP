@@ -8,12 +8,12 @@
 
 import logging
 
-import sleekxmpp
 from sleekxmpp import Iq
 from sleekxmpp.xmlstream import register_stanza_plugin
 from sleekxmpp.xmlstream.handler import Callback
 from sleekxmpp.xmlstream.matcher import StanzaPath
 from sleekxmpp.plugins.base import base_plugin
+import sleekxmpp.plugins.xep_0092
 from sleekxmpp.plugins.xep_0092 import Version
 
 
