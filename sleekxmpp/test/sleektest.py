@@ -5,6 +5,7 @@
 
     See the file LICENSE for copying permission.
 """
+#@PydevCodeAnalysisIgnore
 
 import unittest
 try:
