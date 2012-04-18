@@ -12,6 +12,8 @@
     :license: MIT, see LICENSE for more details
 """
 
+#@PydevCodeAnalysisIgnore
+
 from __future__ import absolute_import, unicode_literals
 
 import logging
@@ -244,7 +246,7 @@ class ClientXMPP(BaseXMPP):
 
         :param features: The features stanza.
         """
-        for order, name in self._stream_feature_order:
+        for _, name in self._stream_feature_order:
             if name in features['features']:
                 handler, restart = self._stream_feature_handlers[name]
                 if handler(features) and restart:

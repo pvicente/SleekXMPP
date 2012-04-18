@@ -12,6 +12,8 @@
     :license: MIT, see LICENSE for more details
 """
 
+#@PydevCodeAnalysisIgnore
+
 from __future__ import absolute_import
 
 import logging

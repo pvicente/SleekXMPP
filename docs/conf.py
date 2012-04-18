@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+#@PydevCodeAnalysisIgnore
 #
 # SleekXMPP documentation build configuration file, created by
 # sphinx-quickstart on Tue Aug  9 22:27:06 2011.
