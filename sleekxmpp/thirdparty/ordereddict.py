@@ -72,7 +72,7 @@ class OrderedDict(dict, DictMixin):
         if last:
             key = reversed(self).next()
         else:
-            key = my_iter(self).next()
+            key = iter(self).next()
         value = self.pop(key)
         return key, value
 
