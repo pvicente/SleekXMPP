@@ -8,12 +8,12 @@
 
 import logging
 
-import sleekxmpp
 from sleekxmpp import Message
 from sleekxmpp.plugins.base import base_plugin
 from sleekxmpp.xmlstream import register_stanza_plugin
 from sleekxmpp.xmlstream.handler import Callback
 from sleekxmpp.xmlstream.matcher import StanzaPath
+import sleekxmpp.plugins.xep_0249
 from sleekxmpp.plugins.xep_0249 import Invite
 
 
