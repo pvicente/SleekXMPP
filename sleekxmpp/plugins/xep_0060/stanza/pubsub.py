@@ -7,7 +7,7 @@
 """
 
 from sleekxmpp import Iq, Message
-from sleekxmpp.xmlstream import register_stanza_plugin, ElementBase, ET, JID
+from sleekxmpp.xmlstream import register_stanza_plugin, ElementBase, JID
 from sleekxmpp.plugins import xep_0004
 from sleekxmpp.plugins.xep_0060.stanza.base import OptionalSetting
 

@@ -1,3 +1,4 @@
+#@PydevCodeAnalysisIgnore
 import logging
 
 from sleekxmpp.test import *
