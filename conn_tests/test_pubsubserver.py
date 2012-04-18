@@ -1,10 +1,6 @@
 import logging
-import sleekxmpp
 from optparse import OptionParser
 from xml.etree import cElementTree as ET
-import os
-import time
-import sys
 import unittest
 import sleekxmpp.plugins.xep_0004
 from sleekxmpp.xmlstream.matcher.stanzapath import StanzaPath

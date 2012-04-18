@@ -15,20 +15,10 @@
 from __future__ import absolute_import, unicode_literals
 
 import logging
-import base64
-import sys
-import hashlib
-import random
-import threading
 
-import sleekxmpp
-from sleekxmpp import plugins
-from sleekxmpp import stanza
-from sleekxmpp import features
 from sleekxmpp.basexmpp import BaseXMPP
 from sleekxmpp.stanza import *
-from sleekxmpp.xmlstream import XMLStream, RestartStream
-from sleekxmpp.xmlstream import StanzaBase, ET, register_stanza_plugin
+from sleekxmpp.xmlstream import XMLStream
 from sleekxmpp.xmlstream.matcher import *
 from sleekxmpp.xmlstream.handler import *
 

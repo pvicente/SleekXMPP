@@ -11,7 +11,6 @@ import sleekxmpp
 from optparse import OptionParser
 from xml.etree import cElementTree as ET
 import os
-import time
 import sys
 import Queue
 import thread

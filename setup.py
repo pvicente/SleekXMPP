@@ -7,7 +7,6 @@
 # This software is licensed as described in the README.rst and LICENSE
 # file, which you should have received as part of this distribution.
 
-import sys
 try:
     from setuptools import setup, Command
 except ImportError:
