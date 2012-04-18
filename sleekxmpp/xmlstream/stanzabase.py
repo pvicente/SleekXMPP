@@ -1,3 +1,4 @@
+#@PydevCodeAnalysisIgnore
 # -*- coding: utf-8 -*-
 """
     sleekxmpp.xmlstream.stanzabase
@@ -14,7 +15,6 @@
 
 import copy
 import logging
-import sys
 import weakref
 from xml.etree import cElementTree as ET
 
@@ -311,11 +311,12 @@ class ElementBase(object):
 
         if self.xml is None:
             # Generate XML from the stanza definition
+            last_xml = None
             for ename in self.name.split('/'):
                 new = ET.Element("{%s}%s" % (self.namespace, ename))
                 if self.xml is None:
                     self.xml = new
-                else:
+                elif last_xml is not None:
                     last_xml.append(new)
                 last_xml = new
             if self.parent is not None:
