@@ -9,11 +9,13 @@
 import logging
 import hashlib
 import random
+import sys
 
 from sleekxmpp.stanza import Iq, StreamFeatures
-from sleekxmpp.xmlstream import ElementBase, ET, register_stanza_plugin
+from sleekxmpp.xmlstream import register_stanza_plugin
 from sleekxmpp.plugins.base import base_plugin
 from sleekxmpp.plugins.xep_0078 import stanza
+from sleekxmpp.exceptions import IqError, IqTimeout
 
 
 log = logging.getLogger(__name__)
@@ -98,8 +100,9 @@ class xep_0078(base_plugin):
 
         # Step 3: Send credentials
         try:
-            result = iq.send(now=True)
-        except IqError as err:
+#            result = iq.send(now=True)
+            iq.send(now=True)
+        except IqError:
             log.info("Authentication failed")
             self.xmpp.disconnect()
             self.xmpp.event("failed_auth", direct=True)

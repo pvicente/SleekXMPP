@@ -10,7 +10,7 @@ import logging
 from . import base
 from .. xmlstream.handler.callback import Callback
 from .. xmlstream.matcher.xpath import MatchXPath
-from .. xmlstream.stanzabase import registerStanzaPlugin, ElementBase, ET, JID
+from .. xmlstream.stanzabase import registerStanzaPlugin, ElementBase
 from .. stanza.iq import Iq
 
 
