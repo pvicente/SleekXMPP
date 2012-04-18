@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+#@PydevCodeAnalysisIgnore
 """
     sleekxmpp.basexmpp
     ~~~~~~~~~~~~~~~~~~
@@ -17,7 +18,6 @@ from __future__ import with_statement, unicode_literals
 import sys
 import logging
 
-import sleekxmpp
 from sleekxmpp import plugins, roster
 from sleekxmpp.exceptions import IqError, IqTimeout
 
@@ -30,6 +30,9 @@ from sleekxmpp.xmlstream import XMLStream, JID
 from sleekxmpp.xmlstream import ET, register_stanza_plugin
 from sleekxmpp.xmlstream.matcher import *
 from sleekxmpp.xmlstream.handler import *
+import sleekxmpp.stanza
+import sleekxmpp.plugins
+import sleekxmpp.features
 
 
 log = logging.getLogger(__name__)

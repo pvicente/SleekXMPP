@@ -4,8 +4,9 @@ XEP-0009 XMPP Remote Procedure Calls
 from __future__ import with_statement
 from . import base
 from xml.etree import cElementTree as ET
-import time
 import base64
+import time
+from sleekxmpp.stanza import iq
 
 def py2xml(*args):
 	params = ET.Element("params")
@@ -100,7 +101,7 @@ class rpcbase64(object):
 		self.data = data
 
 	def decode(self):
-		return base64.decodestring(data)
+		return base64.decodestring(self.data)
 
 	def __str__(self):
 		return self.decode()
@@ -141,7 +142,7 @@ class JabberRPCEntry(object):
 			if self.deny[jid] == None or resource in self.deny[jid]:
 				return False
 		#Check for allow
-		if allow == None:
+		if not self.allow :#no elements in dict
 			return True
 		if jid in self.allow.keys():
 			if self.allow[jid] == None or resource in self.allow[jid]:
@@ -169,7 +170,7 @@ class JabberRPCEntry(object):
 			self.deny[jid] = [resource]
 
 	def call_method(self, args):
-		ret = self.call(*args)
+		return self.call(*args)
 
 class xep_0009(base.base_plugin):
 
@@ -236,7 +237,7 @@ class xep_0009(base.base_plugin):
 		methodCall.append(params)
 		query.append(methodCall)
 		return query
- 
+
 	def makeIqMethodCall(self,pto,pmethod,params):
 		iq = self.xmpp.makeIqSet()
 		iq.set('to',pto)
@@ -252,8 +253,8 @@ class xep_0009(base.base_plugin):
 		query.append(methodResponse)
 		return iq
 
-	def makeIqMethodError(self,pto,id,pmethod,params,condition):
-		iq = self.xmpp.makeIqError(id)
+	def makeIqMethodError(self,pto,uid,pmethod,params,condition):
+		iq = self.xmpp.makeIqError(uid)
 		iq.set('to',pto)
 		iq.append(self.makeMethodCallQuery(pmethod,params))
 		iq.append(self.xmpp['xep_0086'].makeError(condition))

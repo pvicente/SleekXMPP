@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+#@PydevCodeAnalysisIgnore
 """
     SleekXMPP: The Sleek XMPP Library
     Copyright (C) 2010  Nathanael C. Fritz

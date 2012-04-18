@@ -1,3 +1,4 @@
+#@PydevCodeAnalysisIgnore
 # This module is a very stripped down version of the dateutil
 # package for when dateutil has not been installed. As a replacement
 # for dateutil.parser.parse, the parsing methods from
