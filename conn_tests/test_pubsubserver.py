@@ -13,17 +13,24 @@ try:
 	import configparser
 except ImportError:
 	import ConfigParser as configparser
-try:
-	import queue
-except ImportError:
-	import Queue as queue
+
+#Correct import of queue if gevent module is loaded
+if sys.modules.has_key('gevent'):
+	import gevent.queue as queue
+	Queue = queue.JoinableQueue
+else:
+	try:
+		import queue
+	except ImportError:
+		import Queue as queue
+	Queue = queue.Queue
 
 class TestClient(sleekxmpp.ClientXMPP):
 	def __init__(self, jid, password):
 		sleekxmpp.ClientXMPP.__init__(self, jid, password)
 		self.add_event_handler("session_start", self.start)
 		#self.add_event_handler("message", self.message)
-		self.waitforstart = queue.Queue()
+		self.waitforstart = Queue()
 	
 	def start(self, event):
 		self.getRoster()
