@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import tests
 import os
 import sys
 import logging
@@ -57,7 +57,7 @@ class TestCommand(distutils.core.Command):
 
 if __name__ == '__main__':
     result = run_tests()
-    print("<tests %s ran='%s' errors='%s' fails='%s' success='%s' />" % (
+    print("<tests %s ran='%s' errors='%s' fails='%s' success='%s' gevent_enabled='%s'/>" % (
         "xmlns='http//andyet.net/protocol/tests'",
         result.testsRun, len(result.errors),
-        len(result.failures), result.wasSuccessful()))
+        len(result.failures), result.wasSuccessful(), sys.modules.has_key('gevent')))
