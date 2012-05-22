@@ -1,6 +1,11 @@
 #!/usr/bin/env python
-import os
 import sys
+if len(sys.argv)>1 and sys.argv[1].lower() == 'gevent':
+    print 'Loading gevent and making monkey.patch_all()'
+    from gevent import monkey
+    monkey.patch_all()
+
+import os
 import logging
 import unittest
 import distutils.core
