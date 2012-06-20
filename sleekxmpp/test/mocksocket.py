@@ -7,11 +7,17 @@
 """
 
 import socket
-try:
-    import queue
-except ImportError:
-    import Queue as queue
-
+import sys
+#Correct import of queue if gevent module is loaded
+if sys.modules.has_key('gevent'):
+    import gevent.queue as queue
+    Queue = queue.JoinableQueue
+else:
+    try:
+        import queue
+    except ImportError:
+        import Queue as queue
+    Queue = queue.Queue
 
 class TestSocket(object):
 
@@ -36,8 +42,8 @@ class TestSocket(object):
             Same as arguments for socket.socket
         """
         self.socket = socket.socket(*args, **kwargs)
-        self.recv_queue = queue.Queue()
-        self.send_queue = queue.Queue()
+        self.recv_queue = Queue()
+        self.send_queue = Queue()
         self.is_live = False
         self.disconnected = False
 

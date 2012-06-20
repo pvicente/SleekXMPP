@@ -10,10 +10,18 @@
 """
 
 import logging
-try:
-    import queue
-except ImportError:
-    import Queue as queue
+import sys
+
+#Correct import of queue if gevent module is loaded
+if sys.modules.has_key('gevent'):
+    import gevent.queue as queue
+    Queue = queue.JoinableQueue
+else:
+    try:
+        import queue
+    except ImportError:
+        import Queue as queue
+    Queue = queue.Queue
 
 from sleekxmpp.xmlstream import StanzaBase
 from sleekxmpp.xmlstream.handler.base import BaseHandler
@@ -38,7 +46,7 @@ class Waiter(BaseHandler):
 
     def __init__(self, name, matcher, stream=None):
         BaseHandler.__init__(self, name, matcher, stream=stream)
-        self._payload = queue.Queue()
+        self._payload = Queue()
 
     def prerun(self, payload):
         """Store the matched stanza when received during processing.

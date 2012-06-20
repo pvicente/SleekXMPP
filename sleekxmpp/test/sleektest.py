@@ -7,10 +7,17 @@
 """
 
 import unittest
-try:
-    import Queue as queue
-except:
-    import queue
+import sys
+#Correct import of queue if gevent module is loaded
+if sys.modules.has_key('gevent'):
+    import gevent.queue as queue
+    Queue = queue.JoinableQueue
+else:
+    try:
+        import queue
+    except ImportError:
+        import Queue as queue
+    Queue = queue.Queue
 
 import sleekxmpp
 from sleekxmpp import ClientXMPP, ComponentXMPP
@@ -330,7 +337,7 @@ class SleekTest(unittest.TestCase):
 
         # We will use this to wait for the session_start event
         # for live connections.
-        skip_queue = queue.Queue()
+        skip_queue = Queue()
 
         if socket == 'mock':
             self.xmpp.set_socket(TestSocket())

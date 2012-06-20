@@ -15,10 +15,18 @@
 import time
 import threading
 import logging
-try:
-    import queue
-except ImportError:
-    import Queue as queue
+import sys
+
+#Correct import of queue if gevent module is loaded
+if sys.modules.has_key('gevent'):
+    import gevent.queue as queue
+    Queue = queue.JoinableQueue
+else:
+    try:
+        import queue
+    except ImportError:
+        import Queue as queue
+    Queue = queue.Queue
 
 
 log = logging.getLogger(__name__)
@@ -102,7 +110,7 @@ class Scheduler(object):
 
     def __init__(self, parentstop=None):
         #: A queue for storing tasks
-        self.addq = queue.Queue()
+        self.addq = Queue()
         
         #: A list of tasks in order of execution time.
         self.schedule = []
