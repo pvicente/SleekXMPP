@@ -10,19 +10,7 @@
 """
 
 import logging
-import sys
-
-#Correct import of queue if gevent module is loaded
-if sys.modules.has_key('gevent'):
-    import gevent.queue as queue
-    Queue = queue.JoinableQueue
-else:
-    try:
-        import queue
-    except ImportError:
-        import Queue as queue
-    Queue = queue.Queue
-
+from sleekxmpp.utils import Queue, queue
 from sleekxmpp.xmlstream import StanzaBase
 from sleekxmpp.xmlstream.handler.base import BaseHandler
 

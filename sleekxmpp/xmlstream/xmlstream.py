@@ -27,18 +27,7 @@ import time
 import types
 import random
 import weakref
-
-#Correct import of queue if gevent module is loaded
-if sys.modules.has_key('gevent'):
-    import gevent.queue as queue
-    Queue = queue.JoinableQueue
-else:
-    try:
-        import queue
-    except ImportError:
-        import Queue as queue
-    Queue = queue.Queue
-
+from sleekxmpp.utils import Queue, queue
 import sleekxmpp
 from sleekxmpp.thirdparty.statemachine import StateMachine
 from sleekxmpp.xmlstream import Scheduler, tostring
