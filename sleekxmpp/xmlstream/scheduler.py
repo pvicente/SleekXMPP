@@ -15,14 +15,9 @@
 import time
 import threading
 import logging
-try:
-    import queue
-except ImportError:
-    import Queue as queue
-
+from sleekxmpp.utils import Queue, queue
 
 log = logging.getLogger(__name__)
-
 
 class Task(object):
 
@@ -102,7 +97,7 @@ class Scheduler(object):
 
     def __init__(self, parentstop=None):
         #: A queue for storing tasks
-        self.addq = queue.Queue()
+        self.addq = Queue()
         
         #: A list of tasks in order of execution time.
         self.schedule = []

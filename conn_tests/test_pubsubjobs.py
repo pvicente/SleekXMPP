@@ -13,17 +13,15 @@ try:
 	import configparser
 except ImportError:
 	import ConfigParser as configparser
-try:
-	import queue
-except ImportError:
-	import Queue as queue
+
+from sleekxmpp.utils import Queue
 
 class TestClient(sleekxmpp.ClientXMPP):
 	def __init__(self, jid, password):
 		sleekxmpp.ClientXMPP.__init__(self, jid, password)
 		self.add_event_handler("session_start", self.start)
 		#self.add_event_handler("message", self.message)
-		self.waitforstart = queue.Queue()
+		self.waitforstart = Queue()
 	
 	def start(self, event):
 		self.getRoster()

@@ -10,11 +10,7 @@
 """
 
 import logging
-try:
-    import queue
-except ImportError:
-    import Queue as queue
-
+from sleekxmpp.utils import Queue, queue
 from sleekxmpp.xmlstream import StanzaBase
 from sleekxmpp.xmlstream.handler.base import BaseHandler
 
@@ -38,7 +34,7 @@ class Waiter(BaseHandler):
 
     def __init__(self, name, matcher, stream=None):
         BaseHandler.__init__(self, name, matcher, stream=stream)
-        self._payload = queue.Queue()
+        self._payload = Queue()
 
     def prerun(self, payload):
         """Store the matched stanza when received during processing.

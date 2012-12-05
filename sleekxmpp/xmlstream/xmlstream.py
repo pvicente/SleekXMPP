@@ -27,11 +27,7 @@ import time
 import types
 import random
 import weakref
-try:
-    import queue
-except ImportError:
-    import Queue as queue
-
+from sleekxmpp.utils import Queue, queue
 import sleekxmpp
 from sleekxmpp.thirdparty.statemachine import StateMachine
 from sleekxmpp.xmlstream import Scheduler, tostring
@@ -250,10 +246,10 @@ class XMLStream(object):
         self.session_timeout = 45
 
         #: A queue of stream, custom, and scheduled events to be processed.
-        self.event_queue = queue.Queue()
+        self.event_queue = Queue()
 
         #: A queue of string data to be sent over the stream.
-        self.send_queue = queue.Queue()
+        self.send_queue = Queue()
 
         #: A :class:`~sleekxmpp.xmlstream.scheduler.Scheduler` instance for
         #: executing callbacks in the future based on time delays.

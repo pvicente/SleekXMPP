@@ -7,11 +7,7 @@
 """
 
 import unittest
-try:
-    import Queue as queue
-except:
-    import queue
-
+from sleekxmpp.utils import Queue
 import sleekxmpp
 from sleekxmpp import ClientXMPP, ComponentXMPP
 from sleekxmpp.stanza import Message, Iq, Presence
@@ -330,7 +326,7 @@ class SleekTest(unittest.TestCase):
 
         # We will use this to wait for the session_start event
         # for live connections.
-        skip_queue = queue.Queue()
+        skip_queue = Queue()
 
         if socket == 'mock':
             self.xmpp.set_socket(TestSocket())
