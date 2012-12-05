@@ -1,11 +1,7 @@
 import socket
 import threading
 import logging
-try:
-    import queue
-except ImportError:
-    import Queue as queue
-
+from sleekxmpp.utils import Queue
 from sleekxmpp.exceptions import XMPPError
 
 
@@ -33,7 +29,7 @@ class IBBytestream(object):
         self.stream_in_closed = threading.Event()
         self.stream_out_closed = threading.Event()
 
-        self.recv_queue = queue.Queue()
+        self.recv_queue = Queue()
 
         self.send_window = threading.BoundedSemaphore(value=self.window_size)
         self.window_ids = set()

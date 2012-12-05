@@ -26,11 +26,7 @@ import time
 import random
 import weakref
 import uuid
-try:
-    import queue
-except ImportError:
-    import Queue as queue
-
+from sleekxmpp.utils import Queue, queue
 from xml.parsers.expat import ExpatError
 
 import sleekxmpp
@@ -264,10 +260,10 @@ class XMLStream(object):
         self.end_session_on_disconnect = True
 
         #: A queue of stream, custom, and scheduled events to be processed.
-        self.event_queue = queue.Queue()
+        self.event_queue = Queue()
 
         #: A queue of string data to be sent over the stream.
-        self.send_queue = queue.Queue()
+        self.send_queue = Queue()
         self.send_queue_lock = threading.Lock()
         self.send_lock = threading.RLock()
 
