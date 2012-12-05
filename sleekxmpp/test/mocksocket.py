@@ -7,11 +7,7 @@
 """
 
 import socket
-try:
-    import queue
-except ImportError:
-    import Queue as queue
-
+from sleekxmpp.utils import Queue
 
 class TestSocket(object):
 
@@ -36,8 +32,8 @@ class TestSocket(object):
             Same as arguments for socket.socket
         """
         self.socket = socket.socket(*args, **kwargs)
-        self.recv_queue = queue.Queue()
-        self.send_queue = queue.Queue()
+        self.recv_queue = Queue()
+        self.send_queue = Queue()
         self.is_live = False
         self.disconnected = False
 
