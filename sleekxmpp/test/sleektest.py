@@ -8,7 +8,7 @@
 
 import unittest
 from xml.parsers.expat import ExpatError
-from sleekxmpp.utils import Queue
+from sleekxmpp.util import Queue
 import sleekxmpp
 from sleekxmpp import ClientXMPP, ComponentXMPP
 from sleekxmpp.stanza import Message, Iq, Presence

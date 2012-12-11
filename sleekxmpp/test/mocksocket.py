@@ -7,7 +7,9 @@
 """
 
 import socket
-from sleekxmpp.utils import Queue
+
+from sleekxmpp.util import Queue
+
 
 class TestSocket(object):
 

@@ -1,7 +1,8 @@
 import socket
 import threading
 import logging
-from sleekxmpp.utils import Queue
+
+from sleekxmpp.util import Queue
 from sleekxmpp.exceptions import XMPPError
 
 
