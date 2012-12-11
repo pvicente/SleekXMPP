@@ -22,6 +22,7 @@ from sleekxmpp.util import Queue, QueueEmpty
 
 log = logging.getLogger(__name__)
 
+
 class Task(object):
 
     """
