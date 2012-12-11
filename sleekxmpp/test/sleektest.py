@@ -7,6 +7,7 @@
 """
 
 import unittest
+from xml.parsers.expat import ExpatError
 from sleekxmpp.utils import Queue
 import sleekxmpp
 from sleekxmpp import ClientXMPP, ComponentXMPP
@@ -58,8 +59,9 @@ class SleekTest(unittest.TestCase):
         try:
             xml = ET.fromstring(xml_string)
             return xml
-        except SyntaxError as e:
-            if 'unbound' in e.msg:
+        except (SyntaxError, ExpatError) as e:
+            msg = e.msg if hasattr(e, 'msg') else e.message
+            if 'unbound' in msg:
                 known_prefixes = {
                         'stream': 'http://etherx.jabber.org/streams'}
 
@@ -323,6 +325,10 @@ class SleekTest(unittest.TestCase):
                                       plugin_config=plugin_config)
         else:
             raise ValueError("Unknown XMPP connection mode.")
+
+        # Remove unique ID prefix to make it easier to test
+        self.xmpp._id_prefix = ''
+        self.xmpp._disconnect_wait_for_threads = False
 
         # We will use this to wait for the session_start event
         # for live connections.

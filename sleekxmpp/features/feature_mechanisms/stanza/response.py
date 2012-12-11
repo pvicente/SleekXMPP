@@ -10,9 +10,7 @@ import base64
 
 from sleekxmpp.thirdparty.suelta.util import bytes
 
-from sleekxmpp.stanza import StreamFeatures
-from sleekxmpp.xmlstream import ElementBase, StanzaBase, ET
-from sleekxmpp.xmlstream import register_stanza_plugin
+from sleekxmpp.xmlstream import StanzaBase
 
 
 class Response(StanzaBase):
@@ -33,7 +31,10 @@ class Response(StanzaBase):
         return base64.b64decode(bytes(self.xml.text))
 
     def set_value(self, values):
-        self.xml.text = bytes(base64.b64encode(values)).decode('utf-8')
+        if values:
+            self.xml.text = bytes(base64.b64encode(values)).decode('utf-8')
+        else:
+            self.xml.text = '='
 
     def del_value(self):
         self.xml.text = ''
