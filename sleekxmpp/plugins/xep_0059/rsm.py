@@ -10,9 +10,10 @@ import logging
 
 import sleekxmpp
 from sleekxmpp import Iq
-from sleekxmpp.plugins.base import base_plugin
+from sleekxmpp.plugins import BasePlugin, register_plugin
 from sleekxmpp.xmlstream import register_stanza_plugin
-from sleekxmpp.plugins.xep_0059 import Set
+from sleekxmpp.plugins.xep_0059 import stanza, Set
+from sleekxmpp.exceptions import XMPPError
 
 
 log = logging.getLogger(__name__)
@@ -70,38 +71,49 @@ class ResultIterator():
         elif self.start:
             self.query[self.interface]['rsm']['after'] = self.start
 
-        r = self.query.send(block=True)
+        try:
+            r = self.query.send(block=True)
 
-        if not r or not r[self.interface]['rsm']['first'] and \
-           not r[self.interface]['rsm']['last']:
+            if not r[self.interface]['rsm']['first'] and \
+               not r[self.interface]['rsm']['last']:
+                raise StopIteration
+
+            if r[self.interface]['rsm']['count'] and \
+               r[self.interface]['rsm']['first_index']:
+                count = int(r[self.interface]['rsm']['count'])
+                first = int(r[self.interface]['rsm']['first_index'])
+                num_items = len(r[self.interface]['substanzas'])
+                if first + num_items == count:
+                    raise StopIteration
+
+            if self.reverse:
+                self.start = r[self.interface]['rsm']['first']
+            else:
+                self.start = r[self.interface]['rsm']['last']
+
+            return r
+        except XMPPError:
             raise StopIteration
 
-        if self.reverse:
-            self.start = r[self.interface]['rsm']['first']
-        else:
-            self.start = r[self.interface]['rsm']['last']
 
-        return r
-
-
-class xep_0059(base_plugin):
+class XEP_0059(BasePlugin):
 
     """
     XEP-0050: Result Set Management
     """
 
+    name = 'xep_0059'
+    description = 'XEP-0059: Result Set Management'
+    dependencies = set(['xep_0030'])
+    stanza = stanza
+
     def plugin_init(self):
         """
         Start the XEP-0059 plugin.
         """
-        self.xep = '0059'
-        self.description = 'Result Set Management'
-        self.stanza = sleekxmpp.plugins.xep_0059.stanza
-
-    def post_init(self):
-        """Handle inter-plugin dependencies."""
-        base_plugin.post_init(self)
         self.xmpp['xep_0030'].add_feature(Set.namespace)
+        register_stanza_plugin(self.xmpp['xep_0030'].stanza.DiscoItems,
+                               self.stanza.Set)
 
     def iterate(self, stanza, interface):
         """

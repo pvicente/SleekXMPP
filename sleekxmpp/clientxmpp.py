@@ -15,22 +15,13 @@
 from __future__ import absolute_import, unicode_literals
 
 import logging
-import base64
-import sys
-import hashlib
-import random
-import threading
 
-import sleekxmpp
-from sleekxmpp import plugins
-from sleekxmpp import stanza
-from sleekxmpp import features
+from sleekxmpp.stanza import StreamFeatures
 from sleekxmpp.basexmpp import BaseXMPP
-from sleekxmpp.stanza import *
-from sleekxmpp.xmlstream import XMLStream, RestartStream
-from sleekxmpp.xmlstream import StanzaBase, ET, register_stanza_plugin
-from sleekxmpp.xmlstream.matcher import *
-from sleekxmpp.xmlstream.handler import *
+from sleekxmpp.exceptions import XMPPError
+from sleekxmpp.xmlstream import XMLStream
+from sleekxmpp.xmlstream.matcher import StanzaPath, MatchXPath
+from sleekxmpp.xmlstream.handler import Callback
 
 # Flag indicating if DNS SRV records are available for use.
 try:
@@ -74,11 +65,14 @@ class ClientXMPP(BaseXMPP):
         BaseXMPP.__init__(self, jid, 'jabber:client')
 
         self.set_jid(jid)
-        self.password = password
         self.escape_quotes = escape_quotes
         self.plugin_config = plugin_config
         self.plugin_whitelist = plugin_whitelist
         self.default_port = 5222
+
+        self.credentials = {}
+
+        self.password = password
 
         self.stream_header = "<stream:stream to='%s' %s %s version='1.0'>" % (
                 self.boundjid.host,
@@ -90,6 +84,8 @@ class ClientXMPP(BaseXMPP):
         self._stream_feature_handlers = {}
         self._stream_feature_order = []
 
+        self.dns_service = 'xmpp-client'
+
         #TODO: Use stream state here
         self.authenticated = False
         self.sessionstarted = False
@@ -97,6 +93,7 @@ class ClientXMPP(BaseXMPP):
         self.bindfail = False
 
         self.add_event_handler('connected', self._handle_connected)
+        self.add_event_handler('session_bind', self._handle_session_bind)
 
         self.register_stanza(StreamFeatures)
 
@@ -106,9 +103,7 @@ class ClientXMPP(BaseXMPP):
                          self._handle_stream_features))
         self.register_handler(
                 Callback('Roster Update',
-                         MatchXPath('{%s}iq/{%s}query' % (
-                             self.default_ns,
-                             'jabber:iq:roster')),
+                         StanzaPath('iq@type=set/roster'),
                          self._handle_roster))
 
         # Setup default stream features
@@ -117,6 +112,15 @@ class ClientXMPP(BaseXMPP):
         self.register_plugin('feature_session')
         self.register_plugin('feature_mechanisms',
                 pconfig={'use_mech': sasl_mech} if sasl_mech else None)
+        self.register_plugin('feature_rosterver')
+
+    @property
+    def password(self):
+        return self.credentials.get('password', '')
+
+    @password.setter
+    def password(self, value):
+        self.credentials['password'] = value
 
     def connect(self, address=tuple(), reattempt=True,
                 use_tls=True, use_ssl=False):
@@ -135,40 +139,21 @@ class ClientXMPP(BaseXMPP):
                         should be used. Defaults to ``False``.
         """
         self.session_started_event.clear()
-        if not address:
+
+        # If an address was provided, disable using DNS SRV lookup;
+        # otherwise, use the domain from the client JID with the standard
+        # XMPP client port and allow SRV lookup.
+        if address:
+            self.dns_service = None
+        else:
             address = (self.boundjid.host, 5222)
+            self.dns_service = 'xmpp-client'
+
+        self._expected_server_name = self.boundjid.host
 
         return XMLStream.connect(self, address[0], address[1],
                                  use_tls=use_tls, use_ssl=use_ssl,
                                  reattempt=reattempt)
-
-    def get_dns_records(self, domain, port=None):
-        """Get the DNS records for a domain, including SRV records.
-
-        :param domain: The domain in question.
-        :param port: If the results don't include a port, use this one.
-        """
-        if port is None:
-            port = self.default_port
-        if DNSPYTHON:
-            try:
-                record = "_xmpp-client._tcp.%s" % domain
-                answers = []
-                for answer in dns.resolver.query(record, dns.rdatatype.SRV):
-                    address = (answer.target.to_text()[:-1], answer.port)
-                    answers.append((address, answer.priority, answer.weight))
-            except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
-                log.warning("No SRV records for %s", domain)
-                answers = super(ClientXMPP, self).get_dns_records(domain, port)
-            except dns.exception.Timeout:
-                log.warning("DNS resolution timed out " + \
-                            "for SRV record of %s", domain)
-                answers = super(ClientXMPP, self).get_dns_records(domain, port)
-            return answers
-        else:
-            log.warning("dnspython is not installed -- " + \
-                        "relying on OS A record resolution")
-            return [((domain, port), 0, 0)]
 
     def register_feature(self, name, handler, restart=False, order=5000):
         """Register a stream feature handler.
@@ -236,10 +221,18 @@ class ClientXMPP(BaseXMPP):
         iq = self.Iq()
         iq['type'] = 'get'
         iq.enable('roster')
-        response = iq.send(block, timeout, callback)
+        if 'rosterver' in self.features:
+            iq['roster']['ver'] = self.client_roster.version
 
-        if callback is None:
-            return self._handle_roster(response, request=True)
+        if not block and callback is None:
+            callback = lambda resp: self._handle_roster(resp)
+
+        response = iq.send(block, timeout, callback)
+        self.event('roster_received', response)
+
+        if block: 
+            self._handle_roster(response)
+            return response
 
     def _handle_connected(self, event=None):
         #TODO: Use stream state here
@@ -262,31 +255,43 @@ class ClientXMPP(BaseXMPP):
                     # restarting the XML stream.
                     return True
 
-    def _handle_roster(self, iq, request=False):
+    def _handle_roster(self, iq):
         """Update the roster after receiving a roster stanza.
 
         :param iq: The roster stanza.
-        :param request: Indicates if this stanza is a response
-                        to a request for the roster, and not an
-                        empty acknowledgement from the server.
         """
-        if iq['type'] == 'set' or (iq['type'] == 'result' and request):
-            for jid in iq['roster']['items']:
-                item = iq['roster']['items'][jid]
-                roster = self.roster[iq['to'].bare]
-                roster[jid]['name'] = item['name']
-                roster[jid]['groups'] = item['groups']
-                roster[jid]['from'] = item['subscription'] in ['from', 'both']
-                roster[jid]['to'] = item['subscription'] in ['to', 'both']
-                roster[jid]['pending_out'] = (item['ask'] == 'subscribe')
-            self.event('roster_received', iq)
+        if iq['type'] == 'set':
+            if iq['from'].bare and iq['from'].bare != self.boundjid.bare:
+                raise XMPPError(condition='service-unavailable')
 
+        roster = self.client_roster
+        if iq['roster']['ver']:
+            roster.version = iq['roster']['ver']
+        for jid in iq['roster']['items']:
+            item = iq['roster']['items'][jid]
+            roster[jid]['name'] = item['name']
+            roster[jid]['groups'] = item['groups']
+            roster[jid]['from'] = item['subscription'] in ['from', 'both']
+            roster[jid]['to'] = item['subscription'] in ['to', 'both']
+            roster[jid]['pending_out'] = (item['ask'] == 'subscribe')
+
+            roster[jid].save(remove=(item['subscription'] == 'remove'))
+                 
         self.event("roster_update", iq)
         if iq['type'] == 'set':
-            iq.reply()
-            iq.enable('roster')
-            iq.send()
-        return True
+            resp = self.Iq(stype='result',
+                           sto=iq['from'],
+                           sid=iq['id'])
+            resp.enable('roster')
+            resp.send()
+
+    def _handle_session_bind(self, jid):
+        """Set the client roster to the JID set by the server.
+
+        :param :class:`sleekxmpp.xmlstream.jid.JID` jid: The bound JID as
+            dictated by the server. The same as :attr:`boundjid`.
+        """
+        self.client_roster = self.roster[jid]
 
 
 # To comply with PEP8, method names now use underscores.

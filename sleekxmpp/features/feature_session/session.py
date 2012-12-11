@@ -10,9 +10,7 @@ import logging
 
 from sleekxmpp.stanza import Iq, StreamFeatures
 from sleekxmpp.xmlstream import register_stanza_plugin
-from sleekxmpp.xmlstream.matcher import *
-from sleekxmpp.xmlstream.handler import *
-from sleekxmpp.plugins.base import base_plugin
+from sleekxmpp.plugins import BasePlugin
 
 from sleekxmpp.features.feature_session import stanza
 
@@ -20,14 +18,14 @@ from sleekxmpp.features.feature_session import stanza
 log = logging.getLogger(__name__)
 
 
-class feature_session(base_plugin):
+class FeatureSession(BasePlugin):
+
+    name = 'feature_session'
+    description = 'RFC 3920: Stream Feature: Start Session'
+    dependencies = set()
+    stanza = stanza
 
     def plugin_init(self):
-        self.name = 'Start Session'
-        self.rfc = '3920'
-        self.description = 'Start Session Stream Feature'
-        self.stanza = stanza
-
         self.xmpp.register_feature('session',
                 self._handle_start_session,
                 restart=False,
@@ -46,7 +44,7 @@ class feature_session(base_plugin):
         iq = self.xmpp.Iq()
         iq['type'] = 'set'
         iq.enable('session')
-        response = iq.send(now=True)
+        iq.send(now=True)
 
         self.xmpp.features.add('session')
 

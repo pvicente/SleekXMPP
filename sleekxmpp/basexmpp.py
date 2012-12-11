@@ -15,22 +15,25 @@
 from __future__ import with_statement, unicode_literals
 
 import sys
-import copy
 import logging
 
 import sleekxmpp
-from sleekxmpp import plugins, roster
+from sleekxmpp import plugins, features, roster
+from sleekxmpp.api import APIRegistry
 from sleekxmpp.exceptions import IqError, IqTimeout
 
-from sleekxmpp.stanza import Message, Presence, Iq, Error, StreamError
+from sleekxmpp.stanza import Message, Presence, Iq, StreamError
 from sleekxmpp.stanza.roster import Roster
 from sleekxmpp.stanza.nick import Nick
 from sleekxmpp.stanza.htmlim import HTMLIM
 
-from sleekxmpp.xmlstream import XMLStream, JID, tostring
+from sleekxmpp.xmlstream import XMLStream, JID
 from sleekxmpp.xmlstream import ET, register_stanza_plugin
-from sleekxmpp.xmlstream.matcher import *
-from sleekxmpp.xmlstream.handler import *
+from sleekxmpp.xmlstream.matcher import MatchXPath
+from sleekxmpp.xmlstream.handler import Callback
+
+from sleekxmpp.features import *
+from sleekxmpp.plugins import PluginManager, register_plugin, load_plugin
 
 
 log = logging.getLogger(__name__)
@@ -65,9 +68,10 @@ class BaseXMPP(XMLStream):
 
         #: The JabberID (JID) used by this connection. 
         self.boundjid = JID(jid)
+        self._expected_server_name = self.boundjid.host
 
         #: A dictionary mapping plugin names to plugins.
-        self.plugin = {}
+        self.plugin = PluginManager(self)
 
         #: Configuration options for whitelisted plugins.
         #: If a plugin is registered without any configuration,
@@ -94,6 +98,22 @@ class BaseXMPP(XMLStream):
         #: important, primarily for choosing how to handle the
         #: ``'to'`` and ``'from'`` JIDs of stanzas.
         self.is_component = False
+
+        #: The API registry is a way to process callbacks based on
+        #: JID+node combinations. Each callback in the registry is
+        #: marked with:
+        #: 
+        #:   - An API name, e.g. xep_0030
+        #:   - The name of an action, e.g. get_info
+        #:   - The JID that will be affected
+        #:   - The node that will be affected
+        #:
+        #: API handlers with no JID or node will act as global handlers,
+        #: while those with a JID and no node will service all nodes
+        #: for a JID, and handlers with both a JID and node will be
+        #: used only for that specific combination. The handler that
+        #: provides the most specificity will be used.
+        self.api = APIRegistry(self)
 
         #: Flag indicating that the initial presence broadcast has
         #: been sent. Until this happens, some servers may not
@@ -186,9 +206,18 @@ class BaseXMPP(XMLStream):
         - The send queue processor
         - The scheduler
         """
+        if 'xep_0115' in self.plugin:
+            name = 'xep_0115'
+            if not hasattr(self.plugin[name], 'post_inited'):
+                if hasattr(self.plugin[name], 'post_init'):
+                    self.plugin[name].post_init()
+                self.plugin[name].post_inited = True
+
         for name in self.plugin:
-            if not self.plugin[name].post_inited:
-                self.plugin[name].post_init()
+            if not hasattr(self.plugin[name], 'post_inited'):
+                if hasattr(self.plugin[name], 'post_init'):
+                    self.plugin[name].post_init()
+                self.plugin[name].post_inited = True
         return XMLStream.process(self, *args, **kwargs)
 
     def register_plugin(self, plugin, pconfig={}, module=None):
@@ -201,42 +230,14 @@ class BaseXMPP(XMLStream):
         :param module: Optional refence to the module containing the plugin
                        class if using custom plugins.
         """
-        try:
-            # Import the given module that contains the plugin.
-            if not module:
-                try:
-                    module = sleekxmpp.plugins
-                    module = __import__(
-                            str("%s.%s" % (module.__name__, plugin)),
-                            globals(), locals(), [str(plugin)])
-                except ImportError:
-                    module = sleekxmpp.features
-                    module = __import__(
-                            str("%s.%s" % (module.__name__, plugin)),
-                            globals(), locals(), [str(plugin)])
-            if isinstance(module, str):
-                # We probably want to load a module from outside
-                # the sleekxmpp package, so leave out the globals().
-                module = __import__(module, fromlist=[plugin])
 
-            # Use the global plugin config cache, if applicable
-            if not pconfig:
-                pconfig = self.plugin_config.get(plugin, {})
+        # Use the global plugin config cache, if applicable
+        if not pconfig:
+            pconfig = self.plugin_config.get(plugin, {})
 
-            # Load the plugin class from the module.
-            self.plugin[plugin] = getattr(module, plugin)(self, pconfig)
-
-            # Let XEP/RFC implementing plugins have some extra logging info.
-            spec = '(CUSTOM) %s'
-            if self.plugin[plugin].xep:
-                spec = "(XEP-%s) " % self.plugin[plugin].xep
-            elif self.plugin[plugin].rfc:
-                spec = "(RFC-%s) " % self.plugin[plugin].rfc
-
-            desc = (spec, self.plugin[plugin].description)
-            log.debug("Loaded Plugin %s %s" % desc)
-        except:
-            log.exception("Unable to load plugin: %s", plugin)
+        if not self.plugin.registered(plugin):
+            load_plugin(plugin, module)
+        self.plugin.enable(plugin, pconfig)
 
     def register_plugins(self):
         """Register and initialize all built-in plugins.
@@ -253,14 +254,9 @@ class BaseXMPP(XMLStream):
 
         for plugin in plugin_list:
             if plugin in plugins.__all__:
-                self.register_plugin(plugin,
-                                     self.plugin_config.get(plugin, {}))
+                self.register_plugin(plugin)
             else:
                 raise NameError("Plugin %s not in plugins.__all__." % plugin)
-
-        # Resolve plugin inter-dependencies.
-        for plugin in self.plugin:
-            self.plugin[plugin].post_init()
 
     def __getitem__(self, key):
         """Return a plugin given its name, if it has been registered."""
@@ -671,6 +667,8 @@ class BaseXMPP(XMLStream):
 
     def _handle_message(self, msg):
         """Process incoming message stanzas."""
+        if not self.is_component and not msg['to'].bare:
+            msg['to'] = self.boundjid
         self.event('message', msg)
 
     def _handle_available(self, presence):
@@ -736,6 +734,9 @@ class BaseXMPP(XMLStream):
 
         Update the roster with presence information.
         """
+        if not self.is_component and not presence['to'].bare:
+            presence['to'] = self.boundjid
+
         self.event("presence_%s" % presence['type'], presence)
 
         # Check for changes in subscription state.
@@ -763,6 +764,11 @@ class BaseXMPP(XMLStream):
             iq = exception.iq
             log.error('Request timed out: %s', iq)
             log.warning('You should catch IqTimeout exceptions')
+        elif isinstance(exception, SyntaxError):
+            # Hide stream parsing errors that occur when the
+            # stream is disconnected (they've been handled, we
+            # don't need to make a mess in the logs).
+            pass
         else:
             log.exception(exception)
 

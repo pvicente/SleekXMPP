@@ -116,7 +116,7 @@ class Scheduler(object):
         #: Lock for accessing the task queue.
         self.schedule_lock = threading.RLock()
 
-    def process(self, threaded=True):
+    def process(self, threaded=True, daemon=False):
         """Begin accepting and processing scheduled tasks.
 
         :param bool threaded: Indicates if the scheduler should execute
@@ -125,6 +125,7 @@ class Scheduler(object):
         if threaded:
             self.thread = threading.Thread(name='scheduler_process',
                                            target=self._process)
+            self.thread.daemon = daemon
             self.thread.start()
         else:
             self._process()
@@ -133,39 +134,45 @@ class Scheduler(object):
         """Process scheduled tasks."""
         self.run = True
         try:
-            while self.run and not self.stop.isSet():
-                    wait = 1
-                    updated = False
-                    if self.schedule:
-                        wait = self.schedule[0].next - time.time()
-                    try:
-                        if wait <= 0.0:
-                            newtask = self.addq.get(False)
-                        else:
-                            if wait >= 3.0:
-                                wait = 3.0
-                            newtask = self.addq.get(True, wait)
-                    except queue.Empty:
-                        cleanup = []
-                        self.schedule_lock.acquire()
-                        for task in self.schedule:
-                            if time.time() >= task.next:
-                                updated = True
-                                if not task.run():
-                                    cleanup.append(task)
-                            else:
-                                break
-                        for task in cleanup:
-                            x = self.schedule.pop(self.schedule.index(task))
+            while self.run and not self.stop.is_set():
+                wait = 0.1
+                updated = False
+                if self.schedule:
+                    wait = self.schedule[0].next - time.time()
+                try:
+                    if wait <= 0.0:
+                        newtask = self.addq.get(False)
                     else:
-                        updated = True
-                        self.schedule_lock.acquire()
-                        self.schedule.append(newtask)
-                    finally:
-                        if updated:
-                            self.schedule = sorted(self.schedule,
-                                                   key=lambda task: task.next)
-                        self.schedule_lock.release()
+                        if wait >= 3.0:
+                            wait = 3.0
+                        newtask = None
+                        elapsed = 0
+                        while not self.stop.is_set() and \
+                              newtask is None and \
+                              elapsed < wait:
+                            newtask = self.addq.get(True, 0.1)
+                            elapsed += 0.1
+                except queue.Empty:
+                    cleanup = []
+                    self.schedule_lock.acquire()
+                    for task in self.schedule:
+                        if time.time() >= task.next:
+                            updated = True
+                            if not task.run():
+                                cleanup.append(task)
+                        else:
+                            break
+                    for task in cleanup:
+                        self.schedule.pop(self.schedule.index(task))
+                else:
+                    updated = True
+                    self.schedule_lock.acquire()
+                    self.schedule.append(newtask)
+                finally:
+                    if updated:
+                        self.schedule = sorted(self.schedule,
+                                               key=lambda task: task.next)
+                    self.schedule_lock.release()
         except KeyboardInterrupt:
             self.run = False
         except SystemExit:

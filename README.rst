@@ -45,21 +45,13 @@ The latest source code for SleekXMPP may be found on `Github
 ``develop`` branch.
 
 **Latest Release**
-    - `1.0 <http://github.com/fritzy/SleekXMPP/zipball/1.0>`_
+    - `1.1 <http://github.com/fritzy/SleekXMPP/zipball/1.1>`_
 
 **Develop Releases**
     - `Latest Develop Version <http://github.com/fritzy/SleekXMPP/zipball/develop>`_
 
 **Older Stable Releases**
-    - `1.0 RC3 <http://github.com/fritzy/SleekXMPP/zipball/1.0-RC3>`_  
-    - `1.0 RC2 <http://github.com/fritzy/SleekXMPP/zipball/1.0-RC2>`_  
-    - `1.0 RC1 <http://github.com/fritzy/SleekXMPP/zipball/1.0-RC1>`_  
-    - `1.0 Beta6.1 <http://github.com/fritzy/SleekXMPP/zipball/1.0-Beta6.1>`_  
-    - `1.0 Beta5 <http://github.com/fritzy/SleekXMPP/zipball/1.0-Beta5>`_
-    - `1.0 Beta4 <http://github.com/fritzy/SleekXMPP/zipball/1.0-Beta4>`_
-    - `1.0 Beta3 <http://github.com/fritzy/SleekXMPP/zipball/1.0-Beta3>`_
-    - `1.0 Beta2 <http://github.com/fritzy/SleekXMPP/zipball/1.0-Beta2>`_
-    - `1.0 Beta1 <http://github.com/fritzy/SleekXMPP/zipball/1.0-Beta1>`_
+    - `1.0 <http://github.com/fritzy/SleekXMPP/zipball/1.0>`_
 
 Installing DNSPython
 ---------------------
@@ -118,8 +110,12 @@ SleekXMPP projects::
             self.add_event_handler("session_start", self.session_start)
             self.add_event_handler("message", self.message)
 
-            self.register_plugin('xep_0030') # Service Discovery
-            self.register_plugin('xep_0199') # XMPP Ping
+            # If you wanted more functionality, here's how to register plugins:
+            # self.register_plugin('xep_0030') # Service Discovery
+            # self.register_plugin('xep_0199') # XMPP Ping
+
+            # Here's how to access plugins once you've registered them:
+            # self['xep_0030'].add_feature('echo_demo')
 
             # If you are working with an OpenFire server, you will
             # need to use a different SSL version:
@@ -128,18 +124,20 @@ SleekXMPP projects::
 
         def session_start(self, event):
             self.send_presence()
+            self.get_roster()
 
             # Most get_*/set_* methods from plugins use Iq stanzas, which
             # can generate IqError and IqTimeout exceptions
-            try:
-                self.get_roster()
-            except IqError as err:
-                logging.error('There was an error getting the roster')
-                logging.error(err.iq['error']['condition'])
-                self.disconnect()
-            except IqTimeout:
-                logging.error('Server is taking too long to respond')
-                self.disconnect()
+            #
+            # try:
+            #     self.get_roster()
+            # except IqError as err:
+            #     logging.error('There was an error getting the roster')
+            #     logging.error(err.iq['error']['condition'])
+            #     self.disconnect()
+            # except IqTimeout:
+            #     logging.error('Server is taking too long to respond')
+            #     self.disconnect()
 
         def message(self, msg):
             if msg['type'] in ('chat', 'normal'):

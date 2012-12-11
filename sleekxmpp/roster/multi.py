@@ -9,7 +9,6 @@
 from sleekxmpp.xmlstream import JID
 from sleekxmpp.roster import RosterNode
 
-
 class Roster(object):
 
     """
@@ -68,6 +67,8 @@ class Roster(object):
         """
         if isinstance(key, JID):
             key = key.bare
+        if key is None:
+            key = self.xmpp.boundjid.bare
         if key not in self._rosters:
             self.add(key)
             self._rosters[key].auto_authorize = self.auto_authorize
@@ -94,18 +95,23 @@ class Roster(object):
         if node not in self._rosters:
             self._rosters[node] = RosterNode(self.xmpp, node, self.db)
 
-    def set_backend(self, db=None):
+    def set_backend(self, db=None, save=True):
         """
         Set the datastore interface object for the roster.
 
         Arguments:
             db -- The new datastore interface.
+            save -- If True, save the existing state to the new
+                    backend datastore. Defaults to True.
         """
         self.db = db
-        for node in self.db.entries(None, {}):
+        existing_entries = set(self._rosters)
+        new_entries = set(self.db.entries(None, {}))
+
+        for node in existing_entries:
+            self._rosters[node].set_backend(db, save)
+        for node in new_entries - existing_entries:
             self.add(node)
-        for node in self._rosters:
-            self._rosters[node].set_backend(db)
 
     def reset(self):
         """
@@ -182,3 +188,6 @@ class Roster(object):
         self._auto_subscribe = value
         for node in self._rosters:
             self._rosters[node].auto_subscribe = value
+
+    def __repr__(self):
+        return repr(self._rosters)
