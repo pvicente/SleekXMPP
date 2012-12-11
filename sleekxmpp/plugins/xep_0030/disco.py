@@ -288,7 +288,7 @@ class XEP_0030(BasePlugin):
                 'cached': cached}
         return self.api['has_identity'](jid, node, ifrom, data)
 
-    def get_info(self, jid=None, node=None, local=False,
+    def get_info(self, jid=None, node=None, local=None,
                        cached=None, **kwargs):
         """
         Retrieve the disco#info results from a given JID/node combination.
@@ -324,18 +324,21 @@ class XEP_0030(BasePlugin):
             callback -- Optional callback to execute when a reply is
                         received instead of blocking and waiting for
                         the reply.
+            timeout_callback -- Optional callback to execute when no result 
+                        has been received in timeout seconds.
         """
-        if jid is not None and not isinstance(jid, JID):
-            jid = JID(jid)
-            if self.xmpp.is_component:
-                if jid.domain == self.xmpp.boundjid.domain:
-                    local = True
-            else:
-                if str(jid) == str(self.xmpp.boundjid):
-                    local = True
-            jid = jid.full
-        elif jid in (None, ''):
-            local = True
+        if local is None:
+            if jid is not None and not isinstance(jid, JID):
+                jid = JID(jid)
+                if self.xmpp.is_component:
+                    if jid.domain == self.xmpp.boundjid.domain:
+                        local = True
+                else:
+                    if str(jid) == str(self.xmpp.boundjid):
+                        local = True
+                jid = jid.full
+            elif jid in (None, ''):
+                local = True
 
         if local:
             log.debug("Looking up local disco#info data " + \
@@ -363,7 +366,8 @@ class XEP_0030(BasePlugin):
         iq['disco_info']['node'] = node if node else ''
         return iq.send(timeout=kwargs.get('timeout', None),
                        block=kwargs.get('block', True),
-                       callback=kwargs.get('callback', None))
+                       callback=kwargs.get('callback', None),
+                       timeout_callback=kwargs.get('timeout_callback', None))
 
     def set_info(self, jid=None, node=None, info=None):
         """
@@ -404,8 +408,10 @@ class XEP_0030(BasePlugin):
             iterator -- If True, return a result set iterator using
                         the XEP-0059 plugin, if the plugin is loaded.
                         Otherwise the parameter is ignored.
+            timeout_callback -- Optional callback to execute when no result 
+                        has been received in timeout seconds.
         """
-        if local or jid is None:
+        if local or local is None and jid is None:
             items = self.api['get_items'](jid, node,
                     kwargs.get('ifrom', None),
                     kwargs)
@@ -422,7 +428,8 @@ class XEP_0030(BasePlugin):
         else:
             return iq.send(timeout=kwargs.get('timeout', None),
                            block=kwargs.get('block', True),
-                           callback=kwargs.get('callback', None))
+                           callback=kwargs.get('callback', None),
+                           timeout_callback=kwargs.get('timeout_callback', None))
 
     def set_items(self, jid=None, node=None, **kwargs):
         """

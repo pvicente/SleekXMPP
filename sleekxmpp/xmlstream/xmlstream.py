@@ -58,9 +58,6 @@ WAIT_TIMEOUT = 0.1
 #: a GIL increasing this value can provide better performance.
 HANDLER_THREADS = 1
 
-#: Flag indicating if the SSL library is available for use.
-SSL_SUPPORT = True
-
 #: The time in seconds to delay between attempts to resend data
 #: after an SSL error.
 SSL_RETRY_DELAY = 0.5
@@ -117,9 +114,6 @@ class XMLStream(object):
     """
 
     def __init__(self, socket=None, host='', port=0):
-        #: Flag indicating if the SSL library is available for use.
-        self.ssl_support = SSL_SUPPORT
-
         #: Most XMPP servers support TLSv1, but OpenFire in particular
         #: does not work well with it. For OpenFire, set
         #: :attr:`ssl_version` to use ``SSLv23``::
@@ -137,6 +131,17 @@ class XMLStream(object):
         #:     On Mac OS X, certificates in the system keyring will
         #:     be consulted, even if they are not in the provided file.
         self.ca_certs = None
+
+        #: Path to a file containing a client certificate to use for
+        #: authenticating via SASL EXTERNAL. If set, there must also
+        #: be a corresponding `:attr:keyfile` value.
+        self.certfile = None
+
+        #: Path to a file containing the private key for the selected
+        #: client certificate to use for authenticating via SASL EXTERNAL.
+        self.keyfile = None
+
+        self._der_cert = None
 
         #: The time in seconds to wait for events from the event queue,
         #: and also the time between checks for the process stop signal.
@@ -181,6 +186,7 @@ class XMLStream(object):
 
         #: The expected name of the server, for validation.
         self._expected_server_name = ''
+        self._service_name = ''
 
         #: The desired, or actual, address of the connected server.
         self.address = (host, int(port))
@@ -323,7 +329,7 @@ class XMLStream(object):
         #: ``_xmpp-client._tcp`` service.
         self.dns_service = None
 
-        self.add_event_handler('connected', self._handle_connected)
+        self.add_event_handler('connected', self._session_timeout_check)
         self.add_event_handler('disconnected', self._remove_schedules)
         self.add_event_handler('session_start', self._start_keepalive)
         self.add_event_handler('session_start', self._cert_expiration)
@@ -408,6 +414,8 @@ class XMLStream(object):
         :param reattempt: Flag indicating if the socket should reconnect
                           after disconnections.
         """
+        self.stop.clear()
+
         if host and port:
             self.address = (host, int(port))
         try:
@@ -440,7 +448,6 @@ class XMLStream(object):
 
     def _connect(self, reattempt=True):
         self.scheduler.remove('Session timeout check')
-        self.stop.clear()
 
         if self.reconnect_delay is None or not reattempt:
             delay = 1.0
@@ -462,13 +469,15 @@ class XMLStream(object):
 
         if self.default_domain:
             try:
-                self.address = self.pick_dns_answer(self.default_domain,
-                                                    self.address[1])
+                host, address, port = self.pick_dns_answer(self.default_domain,
+                                                           self.address[1])
+                self.address = (address, port)
+                self._service_name = host
             except StopIteration:
                 log.debug("No remaining DNS records to try.")
                 self.dns_answers = None
                 if reattempt:
-                    self.reconnect_delay = None
+                    self.reconnect_delay = delay
                 return False
 
         af = Socket.AF_INET
@@ -491,7 +500,7 @@ class XMLStream(object):
                     self.reconnect_delay = delay
                 return False
 
-        if self.use_ssl and self.ssl_support:
+        if self.use_ssl:
             log.debug("Socket Wrapped for SSL")
             if self.ca_certs is None:
                 cert_policy = ssl.CERT_NONE
@@ -499,6 +508,8 @@ class XMLStream(object):
                 cert_policy = ssl.CERT_REQUIRED
 
             ssl_socket = ssl.wrap_socket(self.socket,
+                                         certfile=self.certfile,
+                                         keyfile=self.keyfile,
                                          ca_certs=self.ca_certs,
                                          cert_reqs=cert_policy,
                                          do_handshake_on_connect=False)
@@ -518,7 +529,7 @@ class XMLStream(object):
                 log.debug("Connecting to %s:%s", domain, self.address[1])
                 self.socket.connect(self.address)
 
-                if self.use_ssl and self.ssl_support:
+                if self.use_ssl:
                     try:
                         self.socket.do_handshake()
                     except (Socket.error, ssl.SSLError):
@@ -613,7 +624,7 @@ class XMLStream(object):
                                  serr.errno, serr.strerror)
             return False
 
-    def _handle_connected(self, event=None):
+    def _session_timeout_check(self, event=None):
         """
         Add check to ensure that a session is established within
         a reasonable amount of time.
@@ -662,6 +673,9 @@ class XMLStream(object):
                               args=(reconnect, wait, send_close))
 
     def _disconnect(self, reconnect=False, wait=None, send_close=True):
+        if not reconnect:
+            self.auto_reconnect = False
+
         if self.end_session_on_disconnect or send_close:
             self.event('session_end', direct=True)
 
@@ -685,7 +699,6 @@ class XMLStream(object):
         # closed in the other direction. If we didn't
         # send a stream footer we don't need to wait
         # since the server won't know to respond.
-        self.auto_reconnect = reconnect
         if send_close:
             log.info('Waiting for %s from server', self.stream_footer)
             self.stream_end_event.wait(4)
@@ -707,6 +720,20 @@ class XMLStream(object):
             #clear your application state
             self.event("disconnected", direct=True)
             return True
+
+    def abort(self):
+        self.session_started_event.clear()
+        self.stop.set()
+        if self._disconnect_wait_for_threads:
+            self._wait_for_threads()
+        try:
+            self.socket.shutdown(Socket.SHUT_RDWR)
+            self.socket.close()
+            self.filesocket.close()
+        except Socket.error:
+            pass
+        self.state.transition_any(['connected', 'disconnected'], 'disconnected', func=lambda: True)
+        self.event("killed", direct=True)
 
     def reconnect(self, reattempt=True, wait=False, send_close=True):
         """Reset the stream's state and reconnect to the server."""
@@ -790,56 +817,55 @@ class XMLStream(object):
         If the handshake is successful, the XML stream will need
         to be restarted.
         """
-        if self.ssl_support:
-            log.info("Negotiating TLS")
-            log.info("Using SSL version: %s", str(self.ssl_version))
-            if self.ca_certs is None:
-                cert_policy = ssl.CERT_NONE
-            else:
-                cert_policy = ssl.CERT_REQUIRED
-
-            ssl_socket = ssl.wrap_socket(self.socket,
-                                         ssl_version=self.ssl_version,
-                                         do_handshake_on_connect=False,
-                                         ca_certs=self.ca_certs,
-                                         cert_reqs=cert_policy)
-
-            if hasattr(self.socket, 'socket'):
-                # We are using a testing socket, so preserve the top
-                # layer of wrapping.
-                self.socket.socket = ssl_socket
-            else:
-                self.socket = ssl_socket
-
-            try:
-                self.socket.do_handshake()
-            except (Socket.error, ssl.SSLError):
-                log.error('CERT: Invalid certificate trust chain.')
-                if not self.event_handled('ssl_invalid_chain'):
-                    self.disconnect(self.auto_reconnect, send_close=False)
-                else:
-                    self.event('ssl_invalid_chain', direct=True)
-                return False
-
-            self._der_cert = self.socket.getpeercert(binary_form=True)
-            pem_cert = ssl.DER_cert_to_PEM_cert(self._der_cert)
-            log.debug('CERT: %s', pem_cert)
-            self.event('ssl_cert', pem_cert, direct=True)
-
-            try:
-                cert.verify(self._expected_server_name, self._der_cert)
-            except cert.CertificateError as err:
-                if not self.event_handled('ssl_invalid_cert'):
-                    log.error(err.message)
-                    self.disconnect(self.auto_reconnect, send_close=False)
-                else:
-                    self.event('ssl_invalid_cert', pem_cert, direct=True)
-
-            self.set_socket(self.socket)
-            return True
+        log.info("Negotiating TLS")
+        log.info("Using SSL version: %s", str(self.ssl_version))
+        if self.ca_certs is None:
+            cert_policy = ssl.CERT_NONE
         else:
-            log.warning("Tried to enable TLS, but ssl module not found.")
+            cert_policy = ssl.CERT_REQUIRED
+
+        ssl_socket = ssl.wrap_socket(self.socket,
+                                     certfile=self.certfile,
+                                     keyfile=self.keyfile,
+                                     ssl_version=self.ssl_version,
+                                     do_handshake_on_connect=False,
+                                     ca_certs=self.ca_certs,
+                                     cert_reqs=cert_policy)
+
+        if hasattr(self.socket, 'socket'):
+            # We are using a testing socket, so preserve the top
+            # layer of wrapping.
+            self.socket.socket = ssl_socket
+        else:
+            self.socket = ssl_socket
+
+        try:
+            self.socket.do_handshake()
+        except (Socket.error, ssl.SSLError):
+            log.error('CERT: Invalid certificate trust chain.')
+            if not self.event_handled('ssl_invalid_chain'):
+                self.disconnect(self.auto_reconnect, send_close=False)
+            else:
+                self._der_cert = self.socket.getpeercert(binary_form=True)
+                self.event('ssl_invalid_chain', direct=True)
             return False
+
+        self._der_cert = self.socket.getpeercert(binary_form=True)
+        pem_cert = ssl.DER_cert_to_PEM_cert(self._der_cert)
+        log.debug('CERT: %s', pem_cert)
+        self.event('ssl_cert', pem_cert, direct=True)
+
+        try:
+            cert.verify(self._expected_server_name, self._der_cert)
+        except cert.CertificateError as err:
+            if not self.event_handled('ssl_invalid_cert'):
+                log.error(err.message)
+                self.disconnect(self.auto_reconnect, send_close=False)
+            else:
+                self.event('ssl_invalid_cert', pem_cert, direct=True)
+
+        self.set_socket(self.socket)
+        return True
 
     def _cert_expiration(self, event):
         """Schedule an event for when the TLS certificate expires."""
@@ -867,9 +893,15 @@ class XMLStream(object):
             log.warn('CERT: Certificate has expired.')
             restart()
 
+        try:
+            total_seconds = cert_ttl.total_seconds()
+        except AttributeError:
+            # for Python < 2.7
+            total_seconds = (cert_ttl.microseconds + (cert_ttl.seconds + cert_ttl.days * 24 * 3600) * 10**6) / 10**6
+
         log.info('CERT: Time until certificate expiration: %s' % cert_ttl)
         self.schedule('Certificate Expiration',
-                      cert_ttl.seconds,
+                      total_seconds,
                       restart)
 
     def _start_keepalive(self, event):
@@ -1203,7 +1235,9 @@ class XMLStream(object):
                         data = filter(data)
                         if data is None:
                             return
-                str_data = str(data)
+                str_data = tostring(data.xml, xmlns=self.default_ns,
+                                              stream=self,
+                                              top_level=True)
                 self.send_raw(str_data, now)
         else:
             self.send_raw(data, now)
