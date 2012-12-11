@@ -10,7 +10,8 @@
 """
 
 import logging
-from sleekxmpp.utils import Queue, queue
+
+from sleekxmpp.util import Queue, QueueEmpty
 from sleekxmpp.xmlstream.handler.base import BaseHandler
 
 
@@ -70,7 +71,7 @@ class Waiter(BaseHandler):
             try:
                 stanza = self._payload.get(True, 1)
                 break
-            except queue.Empty:
+            except QueueEmpty:
                 elapsed_time += 1
                 if elapsed_time >= timeout:
                     log.warning("Timed out waiting for %s", self.name)
