@@ -16,7 +16,6 @@ from sleekxmpp.util.misc_ops import bytes, unicode, hashes, hash, \
 
 # =====================================================================
 # Standardize import of Queue class:
-import sys
 
 import sys
 
@@ -41,7 +40,3 @@ else:
     Queue = queue.Queue
 
 QueueEmpty = queue.Empty
-
-if __name__ == '__main__':
-    help(Queue)
-    print 'Gevent Monkey Patch Enabled ==%s Queue: %s' % (gevent_threads_enabled(), Queue)
