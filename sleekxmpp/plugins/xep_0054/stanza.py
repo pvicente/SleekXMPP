@@ -1,8 +1,7 @@
 import base64
 import datetime as dt
 
-from sleekxmpp.thirdparty.suelta.util import bytes
-
+from sleekxmpp.util import bytes
 from sleekxmpp.xmlstream import ElementBase, ET, register_stanza_plugin, JID
 from sleekxmpp.plugins import xep_0082
 
@@ -542,6 +541,7 @@ register_stanza_plugin(VCardTemp, Logo, iterable=True)
 register_stanza_plugin(VCardTemp, Mailer, iterable=True)
 register_stanza_plugin(VCardTemp, Note, iterable=True)
 register_stanza_plugin(VCardTemp, Nickname, iterable=True)
+register_stanza_plugin(VCardTemp, Org, iterable=True)
 register_stanza_plugin(VCardTemp, Photo, iterable=True)
 register_stanza_plugin(VCardTemp, ProdID, iterable=True)
 register_stanza_plugin(VCardTemp, Rev, iterable=True)

@@ -64,7 +64,6 @@ class ClientXMPP(BaseXMPP):
                  escape_quotes=True, sasl_mech=None, lang='en'):
         BaseXMPP.__init__(self, jid, 'jabber:client')
 
-        self.set_jid(jid)
         self.escape_quotes = escape_quotes
         self.plugin_config = plugin_config
         self.plugin_whitelist = plugin_whitelist
@@ -95,7 +94,7 @@ class ClientXMPP(BaseXMPP):
         self.bound = False
         self.bindfail = False
 
-        self.add_event_handler('connected', self._handle_connected)
+        self.add_event_handler('connected', self._reset_connection_state)
         self.add_event_handler('session_bind', self._handle_session_bind)
 
         self.register_stanza(StreamFeatures)
@@ -113,9 +112,10 @@ class ClientXMPP(BaseXMPP):
         self.register_plugin('feature_starttls')
         self.register_plugin('feature_bind')
         self.register_plugin('feature_session')
+        self.register_plugin('feature_rosterver')
+        self.register_plugin('feature_preapproval')
         self.register_plugin('feature_mechanisms',
                 pconfig={'use_mech': sasl_mech} if sasl_mech else None)
-        self.register_plugin('feature_rosterver')
 
     @property
     def password(self):
@@ -252,7 +252,7 @@ class ClientXMPP(BaseXMPP):
             self._handle_roster(response)
             return response
 
-    def _handle_connected(self, event=None):
+    def _reset_connection_state(self, event=None):
         #TODO: Use stream state here
         self.authenticated = False
         self.sessionstarted = False
@@ -272,6 +272,8 @@ class ClientXMPP(BaseXMPP):
                     # Don't continue if the feature requires
                     # restarting the XML stream.
                     return True
+        log.debug('Finished processing stream features.')
+        self.event('stream_negotiated')
 
     def _handle_roster(self, iq):
         """Update the roster after receiving a roster stanza.
@@ -286,15 +288,17 @@ class ClientXMPP(BaseXMPP):
         if iq['roster']['ver']:
             roster.version = iq['roster']['ver']
         items = iq['roster']['items']
-        for jid in items:
-            item = items[jid]
-            roster[jid]['name'] = item['name']
-            roster[jid]['groups'] = item['groups']
-            roster[jid]['from'] = item['subscription'] in ['from', 'both']
-            roster[jid]['to'] = item['subscription'] in ['to', 'both']
-            roster[jid]['pending_out'] = (item['ask'] == 'subscribe')
 
-            roster[jid].save(remove=(item['subscription'] == 'remove'))
+        valid_subscriptions = ('to', 'from', 'both', 'none', 'remove')
+        for jid, item in items.items():
+            if item['subscription'] in valid_subscriptions:
+                roster[jid]['name'] = item['name']
+                roster[jid]['groups'] = item['groups']
+                roster[jid]['from'] = item['subscription'] in ('from', 'both')
+                roster[jid]['to'] = item['subscription'] in ('to', 'both')
+                roster[jid]['pending_out'] = (item['ask'] == 'subscribe')
+
+                roster[jid].save(remove=(item['subscription'] == 'remove'))
 
         self.event("roster_update", iq)
         if iq['type'] == 'set':

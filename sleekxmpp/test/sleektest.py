@@ -8,9 +8,10 @@
 
 import unittest
 from xml.parsers.expat import ExpatError
-from sleekxmpp.util import Queue
+
 import sleekxmpp
 from sleekxmpp import ClientXMPP, ComponentXMPP
+from sleekxmpp.util import Queue
 from sleekxmpp.stanza import Message, Iq, Presence
 from sleekxmpp.test import TestSocket, TestLiveSocket
 from sleekxmpp.exceptions import XMPPError, IqTimeout, IqError
@@ -367,6 +368,11 @@ class SleekTest(unittest.TestCase):
         else:
             for plugin in plugins:
                 self.xmpp.register_plugin(plugin)
+
+        # Some plugins require messages to have ID values. Set
+        # this to True in tests related to those plugins.
+        self.xmpp.use_message_ids = False
+
         self.xmpp.process(threaded=True)
         if skip:
             if socket != 'live':

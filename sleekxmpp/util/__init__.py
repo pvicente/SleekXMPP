@@ -10,11 +10,16 @@
 """
 
 
+from sleekxmpp.util.misc_ops import bytes, unicode, hashes, hash, \
+                                    num_to_bytes, bytes_to_num, quote, XOR
+
+
 # =====================================================================
 # Standardize import of Queue class:
+
 import sys
 
-def gevent_threads_enabled():
+def _gevent_threads_enabled():
     if not 'gevent' in sys.modules:
         return False
     try:
@@ -24,7 +29,7 @@ def gevent_threads_enabled():
     except ImportError:
         return False
 
-if gevent_threads_enabled():
+if _gevent_threads_enabled():
     import gevent.queue as queue
     Queue = queue.JoinableQueue
 else:
@@ -35,7 +40,3 @@ else:
     Queue = queue.Queue
 
 QueueEmpty = queue.Empty
-
-if __name__ == '__main__':
-    help(Queue)
-    print 'Gevent Monkey Patch Enabled ==%s Queue: %s' % (gevent_threads_enabled(), Queue)
