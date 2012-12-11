@@ -11,7 +11,6 @@ import threading
 
 from sleekxmpp.util import Queue
 
-from sleekxmpp.utils import Queue
 
 class TestLiveSocket(object):
 
