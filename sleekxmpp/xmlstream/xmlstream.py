@@ -530,7 +530,7 @@ class XMLStream(object):
                         if not self.event_handled('ssl_invalid_cert'):
                             self.disconnect(send_close=False)
                         else:
-                            self.event('ssl_invalid_cert', cert, direct=True)
+                            self.event('ssl_invalid_cert', pem_cert, direct=True)
 
             self.set_socket(self.socket, ignore=True)
             #this event is where you should set your application state
@@ -817,7 +817,7 @@ class XMLStream(object):
                 if not self.event_handled('ssl_invalid_cert'):
                     self.disconnect(self.auto_reconnect, send_close=False)
                 else:
-                    self.event('ssl_invalid_cert', cert, direct=True)
+                    self.event('ssl_invalid_cert', pem_cert, direct=True)
 
             self.set_socket(self.socket)
             return True
