@@ -134,17 +134,22 @@ class RosterItem(object):
                 'subscription': 'none',
                 'name': '',
                 'groups': []}
+
         self._db_state = {}
         self.load()
 
-    def set_backend(self, db=None):
+    def set_backend(self, db=None, save=True):
         """
         Set the datastore interface object for the roster item.
 
         Arguments:
-            db -- The new datastore interface.
+            db   -- The new datastore interface.
+            save -- If True, save the existing state to the new
+                    backend datastore. Defaults to True.
         """
         self.db = db
+        if save:
+            self.save()
         self.load()
 
     def load(self):
@@ -167,15 +172,24 @@ class RosterItem(object):
             return self._state
         return None
 
-    def save(self):
+    def save(self, remove=False):
         """
         Save the item's state information to an external datastore,
         if one has been provided.
+
+        Arguments:
+            remove -- If True, expunge the item from the datastore.
         """
         self['subscription'] = self._subscription()
+        if remove:
+            self._state['removed'] = True
         if self.db:
             self.db.save(self.owner, self.jid,
                          self._state, self._db_state)
+
+        # Finally, remove the in-memory copy if needed.
+        if remove:
+            del self.xmpp.roster[self.owner][self.jid]
 
     def __getitem__(self, key):
         """Return a state field's value."""
@@ -342,13 +356,14 @@ class RosterItem(object):
         data = {'status': presence['status'],
                 'show': presence['show'],
                 'priority': presence['priority']}
-        if not self.resources:
-            self.xmpp.event('got_online', presence)
+        got_online = not self.resources
         if resource not in self.resources:
             self.resources[resource] = {}
         old_status = self.resources[resource].get('status', '')
         old_show = self.resources[resource].get('show', None)
         self.resources[resource].update(data)
+        if got_online:
+            self.xmpp.event('got_online', presence)
         if old_show != presence['show'] or old_status != presence['status']:
             self.xmpp.event('changed_status', presence)
 
@@ -482,3 +497,6 @@ class RosterItem(object):
         a roster reset request.
         """
         self.resources = {}
+
+    def __repr__(self):
+        return repr(self._state)

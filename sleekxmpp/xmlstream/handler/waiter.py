@@ -11,7 +11,6 @@
 
 import logging
 from sleekxmpp.utils import Queue, queue
-from sleekxmpp.xmlstream import StanzaBase
 from sleekxmpp.xmlstream.handler.base import BaseHandler
 
 

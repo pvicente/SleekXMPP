@@ -57,11 +57,28 @@ class RosterNode(object):
         self.auto_authorize = True
         self.auto_subscribe = True
         self.last_status = None
+        self._version = ''
         self._jids = {}
 
         if self.db:
+            if hasattr(self.db, 'version'):
+                self._version = self.db.version(self.jid)
             for jid in self.db.entries(self.jid):
                 self.add(jid)
+    
+    @property
+    def version(self):
+        """Retrieve the roster's version ID."""
+        if self.db and hasattr(self.db, 'version'):
+            self._version = self.db.version(self.jid)
+        return self._version
+
+    @version.setter
+    def version(self, version):
+        """Set the roster's version ID."""
+        self._version = version
+        if self.db and hasattr(self.db, 'set_version'):
+            self.db.set_version(self.jid, version)
 
     def __getitem__(self, key):
         """
@@ -74,6 +91,17 @@ class RosterNode(object):
         if key not in self._jids:
             self.add(key, save=True)
         return self._jids[key]
+
+    def __delitem__(self, key):
+        """
+        Remove a roster item from the local storage.
+
+        To remove an item from the server, use the remove() method.
+        """
+        if isinstance(key, JID):
+            key = key.bare
+        if key in self._jids:
+            del self._jids[key]
 
     def __len__(self):
         """Return the number of JIDs referenced by the roster."""
@@ -101,18 +129,23 @@ class RosterNode(object):
         """Iterate over the roster items."""
         return self._jids.__iter__()
 
-    def set_backend(self, db=None):
+    def set_backend(self, db=None, save=True):
         """
         Set the datastore interface object for the roster node.
 
         Arguments:
             db -- The new datastore interface.
+            save -- If True, save the existing state to the new
+                    backend datastore. Defaults to True.
         """
         self.db = db
-        for jid in self.db.entries(self.jid):
+        existing_entries = set(self._jids)
+        new_entries = set(self.db.entries(self.jid, {}))
+        
+        for jid in existing_entries:
+            self._jids[jid].set_backend(db, save)
+        for jid in new_entries - existing_entries:
             self.add(jid)
-        for jid in self._jids:
-            self._jids[jid].set_backend(db)
 
     def add(self, jid, name='', groups=None, afrom=False, ato=False,
             pending_in=False, pending_out=False, whitelisted=False,
@@ -144,6 +177,9 @@ class RosterNode(object):
         """
         if isinstance(jid, JID):
             key = jid.bare
+        else:
+            key = jid
+
         state = {'name': name,
                  'groups': groups or [],
                  'from': afrom,
@@ -152,11 +188,11 @@ class RosterNode(object):
                  'pending_out': pending_out,
                  'whitelisted': whitelisted,
                  'subscription': 'none'}
-        self._jids[jid] = RosterItem(self.xmpp, jid, self.jid,
+        self._jids[key] = RosterItem(self.xmpp, jid, self.jid,
                                      state=state, db=self.db,
                                      roster=self)
         if save:
-            self._jids[jid].save()
+            self._jids[key].save()
 
     def subscribe(self, jid):
         """
@@ -285,3 +321,17 @@ class RosterNode(object):
             if not self.xmpp.sentpresence:
                 self.xmpp.event('sent_presence')
                 self.xmpp.sentpresence = True
+
+    def send_last_presence(self):
+        if self.last_status is None:
+            self.send_presence()
+        else:
+            pres = self.last_status
+            if self.xmpp.is_component:
+                pres['from'] = self.jid
+            else:
+                del pres['from']
+            pres.send()
+
+    def __repr__(self):
+        return repr(self._jids)

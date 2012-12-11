@@ -6,14 +6,15 @@
     See the file LICENSE for copying permission.
 """
 from __future__ import with_statement
-from . import base
+
 import logging
-from xml.etree import cElementTree as ET
-from .. xmlstream.stanzabase import registerStanzaPlugin, ElementBase, JID
-from .. stanza.presence import Presence
-from .. xmlstream.handler.callback import Callback
-from .. xmlstream.matcher.xpath import MatchXPath
-from .. xmlstream.matcher.xmlmask import MatchXMLMask
+
+from sleekxmpp import Presence
+from sleekxmpp.plugins import BasePlugin, register_plugin
+from sleekxmpp.xmlstream import register_stanza_plugin, ElementBase, JID, ET
+from sleekxmpp.xmlstream.handler.callback import Callback
+from sleekxmpp.xmlstream.matcher.xpath import MatchXPath
+from sleekxmpp.xmlstream.matcher.xmlmask import MatchXMLMask
 from sleekxmpp.exceptions import IqError, IqTimeout
 
 
@@ -107,22 +108,31 @@ class MUCPresence(ElementBase):
         log.warning("Cannot delete room through mucpresence plugin.")
         return self
 
-class xep_0045(base.base_plugin):
+
+class XEP_0045(BasePlugin):
+
     """
-    Implements XEP-0045 Multi User Chat
+    Implements XEP-0045 Multi-User Chat
     """
+
+    name = 'xep_0045'
+    description = 'XEP-0045: Multi-User Chat'
+    dependencies = set(['xep_0030', 'xep_0004'])
 
     def plugin_init(self):
         self.rooms = {}
         self.ourNicks = {}
         self.xep = '0045'
-        self.description = 'Multi User Chat'
         # load MUC support in presence stanzas
-        registerStanzaPlugin(Presence, MUCPresence)
+        register_stanza_plugin(Presence, MUCPresence)
         self.xmpp.registerHandler(Callback('MUCPresence', MatchXMLMask("<presence xmlns='%s' />" % self.xmpp.default_ns), self.handle_groupchat_presence))
         self.xmpp.registerHandler(Callback('MUCMessage', MatchXMLMask("<message xmlns='%s' type='groupchat'><body/></message>" % self.xmpp.default_ns), self.handle_groupchat_message))
         self.xmpp.registerHandler(Callback('MUCSubject', MatchXMLMask("<message xmlns='%s' type='groupchat'><subject/></message>" % self.xmpp.default_ns), self.handle_groupchat_subject))
-        self.xmpp.registerHandler(Callback('MUCInvite', MatchXPath("{%s}message/{http://jabber.org/protocol/muc#user}x/invite" % self.xmpp.default_ns), self.handle_groupchat_invite))
+        self.xmpp.registerHandler(Callback('MUCConfig', MatchXMLMask("<message xmlns='%s' type='groupchat'><x xmlns='http://jabber.org/protocol/muc#user'><status/></x></message>" % self.xmpp.default_ns), self.handle_config_change))
+        self.xmpp.registerHandler(Callback('MUCInvite', MatchXPath("{%s}message/{%s}x/{%s}invite" % (
+            self.xmpp.default_ns,
+            'http://jabber.org/protocol/muc#user',
+            'http://jabber.org/protocol/muc#user')), self.handle_groupchat_invite))
 
     def handle_groupchat_invite(self, inv):
         """ Handle an invite into a muc.
@@ -130,6 +140,11 @@ class xep_0045(base.base_plugin):
         logging.debug("MUC invite to %s from %s: %s", inv['from'], inv["from"], inv)
         if inv['from'] not in self.rooms.keys():
             self.xmpp.event("groupchat_invite", inv)
+
+    def handle_config_change(self, msg):
+        """Handle a MUC configuration change (with status code)."""
+        self.xmpp.event('groupchat_config_status', msg)
+        self.xmpp.event('muc::%s::config_status' % msg['from'].bare , msg)
 
     def handle_groupchat_presence(self, pr):
         """ Handle a presence in a muc.
@@ -374,3 +389,7 @@ class xep_0045(base.base_plugin):
         if room not in self.rooms.keys():
             return None
         return self.rooms[room].keys()
+
+
+xep_0045 = XEP_0045
+register_plugin(XEP_0045)

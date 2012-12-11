@@ -14,7 +14,7 @@ from sleekxmpp.exceptions import IqError
 from sleekxmpp.xmlstream.handler import Callback
 from sleekxmpp.xmlstream.matcher import StanzaPath
 from sleekxmpp.xmlstream import register_stanza_plugin, JID
-from sleekxmpp.plugins.base import base_plugin
+from sleekxmpp.plugins import BasePlugin
 from sleekxmpp.plugins.xep_0050 import stanza
 from sleekxmpp.plugins.xep_0050 import Command
 from sleekxmpp.plugins.xep_0004 import Form
@@ -23,7 +23,7 @@ from sleekxmpp.plugins.xep_0004 import Form
 log = logging.getLogger(__name__)
 
 
-class xep_0050(base_plugin):
+class XEP_0050(BasePlugin):
 
     """
     XEP-0050: Ad-Hoc Commands
@@ -78,12 +78,13 @@ class xep_0050(base_plugin):
         terminate_command -- Command user API: delete a command's session
     """
 
+    name = 'xep_0050'
+    description = 'XEP-0050: Ad-Hoc Commands'
+    dependencies = set(['xep_0030', 'xep_0004'])
+    stanza = stanza
+
     def plugin_init(self):
         """Start the XEP-0050 plugin."""
-        self.xep = '0050'
-        self.description = 'Ad-Hoc Commands'
-        self.stanza = stanza
-
         self.threaded = self.config.get('threaded', True)
         self.commands = {}
         self.sessions = self.config.get('session_db', {})
@@ -109,10 +110,8 @@ class xep_0050(base_plugin):
                                     self._handle_command_complete,
                                     threaded=self.threaded)
 
-    def post_init(self):
-        """Handle cross-plugin interactions."""
-        base_plugin.post_init(self)
         self.xmpp['xep_0030'].add_feature(Command.namespace)
+        self.xmpp['xep_0030'].set_items(node=Command.namespace, items=tuple())
 
     def set_backend(self, db):
         """
@@ -214,13 +213,24 @@ class xep_0050(base_plugin):
         name, handler = self.commands.get(key, ('Not found', None))
         if not handler:
             log.debug('Command not found: %s, %s', key, self.commands)
+
+        payload = []
+        for stanza in iq['command']['substanzas']:
+            payload.append(stanza)
+
+        if len(payload) == 1:
+            payload = payload[0]
+
+        interfaces = set([item.plugin_attrib for item in payload])
+        payload_classes = set([item.__class__ for item in payload])
+
         initial_session = {'id': sessionid,
                            'from': iq['from'],
                            'to': iq['to'],
                            'node': node,
-                           'payload': None,
-                           'interfaces': '',
-                           'payload_classes': None,
+                           'payload': payload,
+                           'interfaces': interfaces,
+                           'payload_classes': payload_classes,
                            'notes': None,
                            'has_next': False,
                            'allow_complete': False,
@@ -270,11 +280,19 @@ class xep_0050(base_plugin):
         sessionid = session['id']
 
         payload = session['payload']
+        if payload is None:
+            payload = []
         if not isinstance(payload, list):
             payload = [payload]
 
-        session['interfaces'] = [item.plugin_attrib for item in payload]
-        session['payload_classes'] = [item.__class__ for item in payload]
+        interfaces = session.get('interfaces', set())
+        payload_classes = session.get('payload_classes', set())
+
+        interfaces.update(set([item.plugin_attrib for item in payload]))
+        payload_classes.update(set([item.__class__ for item in payload]))
+
+        session['interfaces'] = interfaces
+        session['payload_classes'] = payload_classes
 
         self.sessions[sessionid] = session
 
@@ -368,7 +386,6 @@ class xep_0050(base_plugin):
         iq.send()
 
         del self.sessions[sessionid]
-
 
     # =================================================================
     # Client side (command user) API
@@ -477,8 +494,10 @@ class xep_0050(base_plugin):
         session['jid'] = jid
         session['node'] = node
         session['timestamp'] = time.time()
-        session['payload'] = None
         session['block'] = block
+        if 'payload' not in session:
+            session['payload'] = None
+
         iq = self.xmpp.Iq()
         iq['type'] = 'set'
         iq['to'] = jid
@@ -486,6 +505,12 @@ class xep_0050(base_plugin):
         session['from'] = ifrom
         iq['command']['node'] = node
         iq['command']['action'] = 'execute'
+        if session['payload'] is not None:
+            payload = session['payload']
+            if not isinstance(payload, list):
+                payload = list(payload)
+            for stanza in payload:
+                iq['command'].append(stanza)
         sessionid = 'client:pending_' + iq['id']
         session['id'] = sessionid
         self.sessions[sessionid] = session
@@ -567,10 +592,11 @@ class xep_0050(base_plugin):
             session -- All stored data relevant to the current
                        command session.
         """
+        sessionid = 'client:' + session['id']
         try:
-            del self.sessions[session['id']]
-        except:
-            pass
+            del self.sessions[sessionid]
+        except Exception as e:
+            log.error("Error deleting adhoc command session: %s" % e.message)
 
     def _handle_command_result(self, iq):
         """

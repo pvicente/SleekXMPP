@@ -9,23 +9,138 @@
 import logging
 
 from sleekxmpp.xmlstream import JID
-from sleekxmpp.plugins.base import base_plugin
+from sleekxmpp.xmlstream.handler import Callback
+from sleekxmpp.xmlstream.matcher import StanzaPath
+from sleekxmpp.plugins.base import BasePlugin
 from sleekxmpp.plugins.xep_0060 import stanza
 
 
 log = logging.getLogger(__name__)
 
 
-class xep_0060(base_plugin):
+class XEP_0060(BasePlugin):
 
     """
     XEP-0060 Publish Subscribe
     """
 
+    name = 'xep_0060'
+    description = 'XEP-0060: Publish-Subscribe'
+    dependencies = set(['xep_0030', 'xep_0004'])
+    stanza = stanza
+
     def plugin_init(self):
-        self.xep = '0060'
-        self.description = 'Publish-Subscribe'
-        self.stanza = stanza
+        self.node_event_map = {}
+
+        self.xmpp.register_handler(
+                Callback('Pubsub Event: Items',
+                    StanzaPath('message/pubsub_event/items'),
+                    self._handle_event_items))
+        self.xmpp.register_handler(
+                Callback('Pubsub Event: Purge',
+                    StanzaPath('message/pubsub_event/purge'),
+                    self._handle_event_purge))
+        self.xmpp.register_handler(
+                Callback('Pubsub Event: Delete',
+                    StanzaPath('message/pubsub_event/delete'),
+                    self._handle_event_delete))
+        self.xmpp.register_handler(
+                Callback('Pubsub Event: Configuration',
+                    StanzaPath('message/pubsub_event/configuration'),
+                    self._handle_event_configuration))
+        self.xmpp.register_handler(
+                Callback('Pubsub Event: Subscription',
+                    StanzaPath('message/pubsub_event/subscription'),
+                    self._handle_event_subscription))
+
+    def _handle_event_items(self, msg):
+        """Raise events for publish and retraction notifications."""
+        node = msg['pubsub_event']['items']['node']
+
+        multi = len(msg['pubsub_event']['items']) > 1
+        values = {}
+        if multi:
+            values = msg.values
+            del values['pubsub_event']
+
+        for item in msg['pubsub_event']['items']:
+            event_name = self.node_event_map.get(node, None)
+            event_type = 'publish'
+            if item.name == 'retract':
+                event_type = 'retract'
+
+            if multi:
+                condensed = self.xmpp.Message()
+                condensed.values = values
+                condensed['pubsub_event']['items']['node'] = node
+                condensed['pubsub_event']['items'].append(item)
+                self.xmpp.event('pubsub_%s' % event_type, msg)
+                if event_name:
+                    self.xmpp.event('%s_%s' % (event_name, event_type),
+                                    condensed)
+            else:
+                self.xmpp.event('pubsub_%s' % event_type, msg)
+                if event_name:
+                    self.xmpp.event('%s_%s' % (event_name, event_type), msg)
+
+    def _handle_event_purge(self, msg):
+        """Raise events for node purge notifications."""
+        node = msg['pubsub_event']['purge']['node']
+        event_name = self.node_event_map.get(node, None)
+
+        self.xmpp.event('pubsub_purge', msg)
+        if event_name:
+            self.xmpp.event('%s_purge' % event_name, msg)
+
+    def _handle_event_delete(self, msg):
+        """Raise events for node deletion notifications."""
+        node = msg['pubsub_event']['delete']['node']
+        event_name = self.node_event_map.get(node, None)
+
+        self.xmpp.event('pubsub_delete', msg)
+        if event_name:
+            self.xmpp.event('%s_delete' % event_name, msg)
+
+    def _handle_event_configuration(self, msg):
+        """Raise events for node configuration notifications."""
+        node = msg['pubsub_event']['configuration']['node']
+        event_name = self.node_event_map.get(node, None)
+
+        self.xmpp.event('pubsub_config', msg)
+        if event_name:
+            self.xmpp.event('%s_config' % event_name, msg)
+
+    def _handle_event_subscription(self, msg):
+        """Raise events for node subscription notifications."""
+        node = msg['pubsub_event']['subscription']['node']
+        event_name = self.node_event_map.get(node, None)
+
+        self.xmpp.event('pubsub_subscription', msg)
+        if event_name:
+            self.xmpp.event('%s_subscription' % event_name, msg)
+
+    def map_node_event(self, node, event_name):
+        """
+        Map node names to events.
+
+        When a pubsub event is received for the given node,
+        raise the provided event.
+
+        For example::
+
+            map_node_event('http://jabber.org/protocol/tune',
+                           'user_tune')
+
+        will produce the events 'user_tune_publish' and 'user_tune_retract'
+        when the respective notifications are received from the node
+        'http://jabber.org/protocol/tune', among other events.
+
+        Arguments:
+            node       -- The node name to map to an event.
+            event_name -- The name of the event to raise when a
+                          notification from the given node is received.
+        """
+        self.node_event_map[node] = event_name
 
     def create_node(self, jid, node, config=None, ntype=None, ifrom=None,
                     block=True, callback=None, timeout=None):
@@ -98,8 +213,9 @@ class xep_0060(base_plugin):
             ifrom      -- Specify the sender's JID.
             block      -- Specify if the send call will block until a response
                           is received, or a timeout occurs. Defaults to True.
-            timeout    -- The length of time (in seconds) to wait for a response
-                          before exiting the send call if blocking is used.
+            timeout    -- The length of time (in seconds) to wait for a
+                          response before exiting the send call if blocking
+                          is used.
                           Defaults to sleekxmpp.xmlstream.RESPONSE_TIMEOUT
             callback   -- Optional reference to a stream handler function. Will
                           be executed when a reply stanza is received.
@@ -146,8 +262,9 @@ class xep_0060(base_plugin):
             ifrom      -- Specify the sender's JID.
             block      -- Specify if the send call will block until a response
                           is received, or a timeout occurs. Defaults to True.
-            timeout    -- The length of time (in seconds) to wait for a response
-                          before exiting the send call if blocking is used.
+            timeout    -- The length of time (in seconds) to wait for a
+                          response before exiting the send call if blocking
+                          is used.
                           Defaults to sleekxmpp.xmlstream.RESPONSE_TIMEOUT
             callback   -- Optional reference to a stream handler function. Will
                           be executed when a reply stanza is received.
@@ -183,8 +300,9 @@ class xep_0060(base_plugin):
         iq['pubsub']['affiliations']['node'] = node
         return iq.send(block=block, callback=callback, timeout=timeout)
 
-    def get_subscription_options(self, jid, node=None, user_jid=None, ifrom=None,
-                                 block=True, callback=None, timeout=None):
+    def get_subscription_options(self, jid, node=None, user_jid=None,
+                                 ifrom=None, block=True, callback=None,
+                                 timeout=None):
         iq = self.xmpp.Iq(sto=jid, sfrom=ifrom, stype='get')
         if user_jid is None:
             iq['pubsub']['default']['node'] = node
@@ -364,7 +482,7 @@ class xep_0060(base_plugin):
         """
         Discover the nodes provided by a Pubsub service, using disco.
         """
-        return self.xmpp.plugin['xep_0030'].get_items(*args, **kwargs)
+        return self.xmpp['xep_0030'].get_items(*args, **kwargs)
 
     def get_item(self, jid, node, item_id, ifrom=None, block=True,
                  callback=None, timeout=None):
@@ -372,7 +490,7 @@ class xep_0060(base_plugin):
         Retrieve the content of an individual item.
         """
         iq = self.xmpp.Iq(sto=jid, sfrom=ifrom, stype='get')
-        item = self.stanza.Item()
+        item = stanza.Item()
         item['id'] = item_id
         iq['pubsub']['items']['node'] = node
         iq['pubsub']['items'].append(item)
@@ -396,7 +514,7 @@ class xep_0060(base_plugin):
 
         if item_ids is not None:
             for item_id in item_ids:
-                item = self.stanza.Item()
+                item = stanza.Item()
                 item['id'] = item_id
                 iq['pubsub']['items'].append(item)
 
@@ -410,12 +528,12 @@ class xep_0060(base_plugin):
         """
         Retrieve the ItemIDs hosted by a given node, using disco.
         """
-        return self.xmpp.plugin['xep_0030'].get_items(jid, node,
-                                                      ifrom=ifrom,
-                                                      block=block,
-                                                      callback=callback,
-                                                      timeout=timeout,
-                                                      iterator=iterator)
+        return self.xmpp['xep_0030'].get_items(jid, node,
+                ifrom=ifrom,
+                block=block,
+                callback=callback,
+                timeout=timeout,
+                iterator=iterator)
 
     def modify_affiliations(self, jid, node, affiliations=None, ifrom=None,
                             block=True, callback=None, timeout=None):
@@ -426,7 +544,7 @@ class xep_0060(base_plugin):
             affiliations = []
 
         for jid, affiliation in affiliations:
-            aff = self.stanza.OwnerAffiliation()
+            aff = stanza.OwnerAffiliation()
             aff['jid'] = jid
             aff['affiliation'] = affiliation
             iq['pubsub_owner']['affiliations'].append(aff)
@@ -442,7 +560,7 @@ class xep_0060(base_plugin):
             subscriptions = []
 
         for jid, subscription in subscriptions:
-            sub = self.stanza.OwnerSubscription()
+            sub = stanza.OwnerSubscription()
             sub['jid'] = jid
             sub['subscription'] = subscription
             iq['pubsub_owner']['subscriptions'].append(sub)

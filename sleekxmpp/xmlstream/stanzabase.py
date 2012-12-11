@@ -14,7 +14,6 @@
 
 import copy
 import logging
-import sys
 import weakref
 from xml.etree import cElementTree as ET
 
@@ -36,6 +35,17 @@ def register_stanza_plugin(stanza, plugin, iterable=False, overrides=False):
 
     >>> from sleekxmpp.xmlstream import register_stanza_plugin
     >>> register_stanza_plugin(Iq, CustomStanza)
+
+    Plugin stanzas marked as iterable will be included in the list of
+    substanzas for the parent, using ``parent['substanzas']``. If the
+    attribute ``plugin_multi_attrib`` was defined for the plugin, then
+    the substanza set can be filtered to only instances of the plugin
+    class. For example, given a plugin class ``Foo`` with 
+    ``plugin_multi_attrib = 'foos'`` then::
+
+        parent['foos']
+
+    would return a collection of all ``Foo`` substanzas.
 
     :param class stanza: The class of the parent stanza.
     :param class plugin: The class of the plugin stanza.
@@ -68,6 +78,9 @@ def register_stanza_plugin(stanza, plugin, iterable=False, overrides=False):
 
     if iterable:
         stanza.plugin_iterables.add(plugin)
+        if plugin.plugin_multi_attrib:
+            multiplugin = multifactory(plugin, plugin.plugin_multi_attrib)
+            register_stanza_plugin(stanza, multiplugin)
     if overrides:
         for interface in plugin.overrides:
             stanza.plugin_overrides[interface] = plugin.plugin_attrib
@@ -75,6 +88,88 @@ def register_stanza_plugin(stanza, plugin, iterable=False, overrides=False):
 
 # To maintain backwards compatibility for now, preserve the camel case name.
 registerStanzaPlugin = register_stanza_plugin
+
+
+def multifactory(stanza, plugin_attrib):
+    """
+    Returns a ElementBase class for handling reoccuring child stanzas
+    """
+    class Multi(ElementBase):
+        """
+        Template class for multifactory
+        """
+        def setup(self, xml=None):
+            self.xml = ET.Element('')
+
+    def get_multi(self):
+        parent = self.parent()
+        res = filter(lambda sub: isinstance(sub, self._multistanza), parent)
+        return list(res)
+
+    def set_multi(self, val):
+        parent = self.parent()
+        del parent[self.plugin_attrib]
+        for sub in val:
+            parent.append(sub)
+
+    def del_multi(self):
+        parent = self.parent()
+        res = filter(lambda sub: isinstance(sub, self._multistanza), parent)
+        for stanza in list(res):
+            parent.iterables.remove(stanza)
+            parent.xml.remove(stanza.xml)
+
+    Multi.is_extension = True
+    Multi.plugin_attrib = plugin_attrib
+    Multi._multistanza = stanza
+    Multi.interfaces = (plugin_attrib,)
+    setattr(Multi, "get_%s" % plugin_attrib, get_multi)
+    setattr(Multi, "set_%s" % plugin_attrib, set_multi)
+    setattr(Multi, "del_%s" % plugin_attrib, del_multi)
+    return Multi
+
+
+def fix_ns(xpath, split=False, propagate_ns=True, default_ns=''):
+    """Apply the stanza's namespace to elements in an XPath expression.
+
+    :param string xpath: The XPath expression to fix with namespaces.
+    :param bool split: Indicates if the fixed XPath should be left as a
+                       list of element names with namespaces. Defaults to
+                       False, which returns a flat string path.
+    :param bool propagate_ns: Overrides propagating parent element
+                              namespaces to child elements. Useful if
+                              you wish to simply split an XPath that has
+                              non-specified namespaces, and child and
+                              parent namespaces are known not to always
+                              match. Defaults to True.
+    """
+    fixed = []
+    # Split the XPath into a series of blocks, where a block
+    # is started by an element with a namespace.
+    ns_blocks = xpath.split('{')
+    for ns_block in ns_blocks:
+        if '}' in ns_block:
+            # Apply the found namespace to following elements
+            # that do not have namespaces.
+            namespace = ns_block.split('}')[0]
+            elements = ns_block.split('}')[1].split('/')
+        else:
+            # Apply the stanza's namespace to the following
+            # elements since no namespace was provided.
+            namespace = default_ns
+            elements = ns_block.split('/')
+
+        for element in elements:
+            if element:
+                # Skip empty entry artifacts from splitting.
+                if propagate_ns:
+                    tag = '{%s}%s' % (namespace, element)
+                else:
+                    tag = element
+                fixed.append(tag)
+    if split:
+        return fixed
+    return '/'.join(fixed)
 
 
 class ElementBase(object):
@@ -174,6 +269,16 @@ class ElementBase(object):
     #:     msg['foo']['an_interface_from_the_foo_plugin']
     plugin_attrib = 'plugin'
 
+    #: For :class:`ElementBase` subclasses that are intended to be an
+    #: iterable group of items, the ``plugin_multi_attrib`` value defines
+    #: an interface for the parent stanza which returns the entire group
+    #: of matching substanzas. So the following are equivalent::
+    #:
+    #:     # Given stanza class Foo, with plugin_multi_attrib = 'foos'
+    #:     parent['foos']
+    #:     filter(isinstance(item, Foo), parent['substanzas'])
+    plugin_multi_attrib = ''
+
     #: The set of keys that the stanza provides for accessing and
     #: manipulating the underlying XML object. This set may be augmented
     #: with the :attr:`plugin_attrib` value of any registered
@@ -185,6 +290,13 @@ class ElementBase(object):
     #: of these subelements may be set, retrieved, or removed without
     #: needing to define custom methods.
     sub_interfaces = tuple()
+
+    #: A subset of :attr:`interfaces` which maps the presence of
+    #: subelements to boolean values. Using this set allows for quickly
+    #: checking for the existence of empty subelements like ``<required />``.
+    #:
+    #: .. versionadded:: 1.1
+    bool_interfaces = tuple()
 
     #: In some cases you may wish to override the behaviour of one of the
     #: parent stanza's interfaces. The ``overrides`` list specifies the
@@ -277,7 +389,10 @@ class ElementBase(object):
         #: If not, then :attr:`parent` is ``None``.
         self.parent = None
         if parent is not None:
-            self.parent = weakref.ref(parent)
+            if not isinstance(parent, weakref.ReferenceType):
+                self.parent = weakref.ref(parent)
+            else:
+                self.parent = parent
 
         if self.subitem is not None:
             for sub in self.subitem:
@@ -309,6 +424,7 @@ class ElementBase(object):
         if self.xml is None:
             self.xml = xml
 
+        last_xml = self.xml
         if self.xml is None:
             # Generate XML from the stanza definition
             for ename in self.name.split('/'):
@@ -345,10 +461,13 @@ class ElementBase(object):
         """
         if attrib not in self.plugins:
             plugin_class = self.plugin_attrib_map[attrib]
-            plugin = plugin_class(parent=self)
+            existing_xml = self.xml.find(plugin_class.tag_name())
+            plugin = plugin_class(parent=self, xml=existing_xml)
             self.plugins[attrib] = plugin
             if plugin_class in self.plugin_iterables:
                 self.iterables.append(plugin)
+                if plugin_class.plugin_multi_attrib:
+                    self.init_plugin(plugin_class.plugin_multi_attrib)
         return self
 
     def _get_stanza_values(self):
@@ -445,9 +564,11 @@ class ElementBase(object):
             4. The result of calling ``getFoo``.
             5. The contents of the ``foo`` subelement, if ``foo`` is listed
                in :attr:`sub_interfaces`.
-            6. The value of the ``foo`` attribute of the XML object.
-            7. The plugin named ``'foo'``
-            8. An empty string.
+            6. True or False depending on the existence of a ``foo``
+               subelement and ``foo`` is in :attr:`bool_interfaces`.
+            7. The value of the ``foo`` attribute of the XML object.
+            8. The plugin named ``'foo'``
+            9. An empty string.
 
         :param string attrib: The name of the requested stanza interface.
         """
@@ -473,6 +594,9 @@ class ElementBase(object):
             else:
                 if attrib in self.sub_interfaces:
                     return self._get_sub_text(attrib)
+                elif attrib in self.bool_interfaces:
+                    elem = self.xml.find('{%s}%s' % (self.namespace, attrib))
+                    return elem is not None
                 else:
                     return self._get_attr(attrib)
         elif attrib in self.plugin_attrib_map:
@@ -506,10 +630,12 @@ class ElementBase(object):
             4. Call ``setFoo``, if it exists.
             5. Set the text of a ``foo`` element, if ``'foo'`` is
                in :attr:`sub_interfaces`.
-            6. Set the value of a top level XML attribute named ``foo``.
-            7. Attempt to pass the value to a plugin named ``'foo'`` using
+            6. Add or remove an empty subelement ``foo``
+               if ``foo`` is in :attr:`bool_interfaces`.
+            7. Set the value of a top level XML attribute named ``foo``.
+            8. Attempt to pass the value to a plugin named ``'foo'`` using
                the plugin's ``'foo'`` interface.
-            8. Do nothing.
+            9. Do nothing.
 
         :param string attrib: The name of the stanza interface to modify.
         :param value: The new value of the stanza interface.
@@ -536,6 +662,11 @@ class ElementBase(object):
                 else:
                     if attrib in self.sub_interfaces:
                         return self._set_sub_text(attrib, text=value)
+                    elif attrib in self.bool_interfaces:
+                        if value:
+                            return self._set_sub_text(attrib, '', keep=True)
+                        else:
+                            return self._set_sub_text(attrib, '', keep=False)
                     else:
                         self._set_attr(attrib, value)
             else:
@@ -570,9 +701,11 @@ class ElementBase(object):
             3. Call ``delFoo``, if it exists.
             4. Delete ``foo`` element, if ``'foo'`` is in
                :attr:`sub_interfaces`.
-            5. Delete top level XML attribute named ``foo``.
-            6. Remove the ``foo`` plugin, if it was loaded.
-            7. Do nothing.
+            5. Remove ``foo`` element if ``'foo'`` is in
+               :attr:`bool_interfaces`.
+            6. Delete top level XML attribute named ``foo``.
+            7. Remove the ``foo`` plugin, if it was loaded.
+            8. Do nothing.
 
         :param attrib: The name of the affected stanza interface.
         """
@@ -595,6 +728,8 @@ class ElementBase(object):
                 getattr(self, del_method2)()
             else:
                 if attrib in self.sub_interfaces:
+                    return self._del_sub(attrib)
+                elif attrib in self.bool_interfaces:
                     return self._del_sub(attrib)
                 else:
                     self._del_attr(attrib)
@@ -759,7 +894,7 @@ class ElementBase(object):
                              may be either a string or a list of element
                              names with attribute checks.
         """
-        if isinstance(xpath, str):
+        if not isinstance(xpath, list):
             xpath = self._fix_ns(xpath, split=True, propagate_ns=False)
 
         # Extract the tag name and attribute checks for the first XPath node.
@@ -883,6 +1018,9 @@ class ElementBase(object):
                 raise TypeError
         self.xml.append(item.xml)
         self.iterables.append(item)
+        if item.__class__ in self.plugin_iterables:
+            if item.__class__.plugin_multi_attrib:
+                self.init_plugin(item.__class__.plugin_multi_attrib)
         return self
 
     def appendxml(self, xml):
@@ -917,8 +1055,9 @@ class ElementBase(object):
 
         Any attribute values will be preserved.
         """
-        for child in self.xml.getchildren():
+        for child in list(self.xml):
             self.xml.remove(child)
+
         for plugin in list(self.plugins.keys()):
             del self.plugins[plugin]
         return self
@@ -951,46 +1090,9 @@ class ElementBase(object):
         return self
 
     def _fix_ns(self, xpath, split=False, propagate_ns=True):
-        """Apply the stanza's namespace to elements in an XPath expression.
-
-        :param string xpath: The XPath expression to fix with namespaces.
-        :param bool split: Indicates if the fixed XPath should be left as a
-                           list of element names with namespaces. Defaults to
-                           False, which returns a flat string path.
-        :param bool propagate_ns: Overrides propagating parent element
-                                  namespaces to child elements. Useful if
-                                  you wish to simply split an XPath that has
-                                  non-specified namespaces, and child and
-                                  parent namespaces are known not to always
-                                  match. Defaults to True.
-        """
-        fixed = []
-        # Split the XPath into a series of blocks, where a block
-        # is started by an element with a namespace.
-        ns_blocks = xpath.split('{')
-        for ns_block in ns_blocks:
-            if '}' in ns_block:
-                # Apply the found namespace to following elements
-                # that do not have namespaces.
-                namespace = ns_block.split('}')[0]
-                elements = ns_block.split('}')[1].split('/')
-            else:
-                # Apply the stanza's namespace to the following
-                # elements since no namespace was provided.
-                namespace = self.namespace
-                elements = ns_block.split('/')
-
-            for element in elements:
-                if element:
-                    # Skip empty entry artifacts from splitting.
-                    if propagate_ns:
-                        tag = '{%s}%s' % (namespace, element)
-                    else:
-                        tag = element
-                    fixed.append(tag)
-        if split:
-            return fixed
-        return '/'.join(fixed)
+        return fix_ns(xpath, split=split, 
+                             propagate_ns=propagate_ns, 
+                             default_ns=self.namespace)
 
     def __eq__(self, other):
         """Compare the stanza object with another to test for equality.
@@ -1142,6 +1244,8 @@ class StanzaBase(ElementBase):
             self['to'] = sto
         if sfrom is not None:
             self['from'] = sfrom
+        if sid is not None:
+            self['id'] = sid
         self.tag = "{%s}%s" % (self.namespace, self.name)
 
     def set_type(self, value):
@@ -1251,7 +1355,7 @@ class StanzaBase(ElementBase):
                          stanza sent immediately. Useful for stream
                          initialization. Defaults to ``False``.
         """
-        self.stream.send_raw(self.__str__(), now=now)
+        self.stream.send(self, now=now)
 
     def __copy__(self):
         """Return a copy of the stanza object that does not share the
