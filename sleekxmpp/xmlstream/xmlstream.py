@@ -26,10 +26,11 @@ import time
 import random
 import weakref
 import uuid
-from sleekxmpp.utils import Queue, queue
+
 from xml.parsers.expat import ExpatError
 
 import sleekxmpp
+from sleekxmpp.util import Queue, QueueEmpty
 from sleekxmpp.thirdparty.statemachine import StateMachine
 from sleekxmpp.xmlstream import Scheduler, tostring, cert
 from sleekxmpp.xmlstream.stanzabase import StanzaBase, ET, ElementBase
@@ -210,6 +211,10 @@ class XMLStream(object):
 
         #: If set to ``True``, attempt to use IPv6.
         self.use_ipv6 = True
+
+        #: Use CDATA for escaping instead of XML entities. Defaults
+        #: to ``False``.
+        self.use_cdata = False
 
         #: An optional dictionary of proxy settings. It may provide:
         #: :host: The host offering proxy services.
@@ -463,7 +468,7 @@ class XMLStream(object):
                 log.debug("No remaining DNS records to try.")
                 self.dns_answers = None
                 if reattempt:
-                    self.reconnect_delay = delay
+                    self.reconnect_delay = None
                 return False
 
         af = Socket.AF_INET
@@ -1582,7 +1587,7 @@ class XMLStream(object):
                 try:
                     wait = self.wait_timeout
                     event = self.event_queue.get(True, timeout=wait)
-                except queue.Empty:
+                except QueueEmpty:
                     event = None
                 if event is None:
                     continue
@@ -1651,7 +1656,7 @@ class XMLStream(object):
                 else:
                     try:
                         data = self.send_queue.get(True, 1)
-                    except queue.Empty:
+                    except QueueEmpty:
                         continue
                 log.debug("SEND: %s", data)
                 enc_data = data.encode('utf-8')
